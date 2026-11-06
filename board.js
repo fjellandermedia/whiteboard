@@ -285,18 +285,38 @@ function watchPeerConnection(pc, diag, label) {
       diag.add(label + ': kandidater klara ' + JSON.stringify(types));
       return;
     }
-    const cand = e.candidate.candidate || '';
-    const m = / typ (\w+)/.exec(cand);
-    const t = m ? m[1] : 'okänd';
-    types[t] = (types[t] || 0) + 1;
-    const addr = (/candidate:\S+ \d+ \S+ \d+ (\S+)/.exec(cand) || [])[1] || '';
-    const kind = addr.endsWith('.local') ? 'mDNS-namn' : addr.includes(':') ? 'ipv6' : 'ipv4';
-    diag.add(label + ': kandidat ' + t + ' (' + kind + (/ tcptype/.test(cand) ? ', tcp' : '') + ')');
+    const info = describeCandidate(e.candidate.candidate);
+    if (!info) return; // Firefox skickar en tom kandidat som slutmarkering
+    types[info.type] = (types[info.type] || 0) + 1;
+    diag.add(label + ': egen kandidat ' + info.text);
   });
+  // Logga även kandidater som kommer från motparten via signaleringen.
+  const original = pc.addIceCandidate.bind(pc);
+  pc.addIceCandidate = function (candidate, ...rest) {
+    const info = candidate && describeCandidate(candidate.candidate);
+    const result = original(candidate, ...rest);
+    if (info) {
+      Promise.resolve(result).then(
+        () => diag.add(label + ': mottagen kandidat ' + info.text),
+        (err) => diag.add(label + ': mottagen kandidat ' + info.text + ' AVVISAD: ' + (err && err.message ? err.message : err))
+      );
+    }
+    return result;
+  };
   pc.addEventListener('signalingstatechange', () => diag.add(label + ': signalering ' + pc.signalingState));
   pc.addEventListener('iceconnectionstatechange', () => diag.add(label + ': ice ' + pc.iceConnectionState));
   pc.addEventListener('connectionstatechange', () => diag.add(label + ': koppling ' + pc.connectionState));
   pc.addEventListener('icegatheringstatechange', () => diag.add(label + ': insamling ' + pc.iceGatheringState));
+}
+
+function describeCandidate(cand) {
+  cand = String(cand || '');
+  if (!cand) return null;
+  const m = / typ (\w+)/.exec(cand);
+  const type = m ? m[1] : 'okänd';
+  const addr = (/candidate:\S+ \d+ \S+ \d+ (\S+)/.exec(cand) || [])[1] || '';
+  const kind = addr.endsWith('.local') ? 'mDNS-namn' : addr.includes(':') ? 'ipv6' : 'ipv4';
+  return { type, text: type + ' (' + kind + (/ tcptype/.test(cand) ? ', tcp' : '') + ')' };
 }
 
 // Testar om STUN och TURN går att nå. Returnerar vilka kandidattyper som hittades.
