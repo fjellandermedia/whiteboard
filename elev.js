@@ -56,7 +56,7 @@
       joinError.hidden = false;
     }
   } else {
-    if (hashRoom) roomInput.value = hashRoom;
+    roomInput.value = hashRoom || storage.get('wb-last-room') || '';
     nameInput.value = storage.get('wb-name') || '';
     if (hashRoom) nameInput.focus(); else roomInput.focus();
   }
@@ -73,6 +73,7 @@
     room = code;
     name = nameInput.value.trim().slice(0, 40);
     storage.set('wb-name', name);
+    storage.set('wb-last-room', room);
     history.replaceState(null, '', '#' + room);
     startBoard();
   });

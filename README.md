@@ -41,6 +41,13 @@ kvar på servern i en vecka efter senaste användning, så tavlorna från förra
 trycker **Rensa alla**. Ett rum som inte använts på en vecka blir ledigt för vem som helst igen. Elevernas streck sparas också lokalt
 i deras webbläsare, så en omladdning hos eleven tappar inget. Varje flik räknas som en egen tavla.
 
+## På telefon och surfplatta
+
+Tavlan blir störst med telefonen på sidan. Adressfältet i Safari tar ändå plats; eleven kan dölja det
+med **aA → Dölj verktygsfält** i adressfältet, eller lägga sidan på hemskärmen (**Dela → Lägg till på
+hemskärmen**), då öppnas den som en app utan adressfält. Senast använda rumskod är ifylld när sidan
+öppnas från hemskärmen.
+
 ## Installation
 
 ### 1. Sidan på GitHub Pages

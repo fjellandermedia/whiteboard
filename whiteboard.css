@@ -209,6 +209,25 @@ input[type="text"] {
 .diag pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; max-height: 30vh; overflow: auto; }
 .diag button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
 
+/* Telefon på sidan: gör verktygsraden kompakt så tavlan får plats. */
+@media (max-height: 520px) {
+  .toolbar { padding: 4px 6px; gap: 4px; }
+  .toolbar .group { gap: 2px; }
+  .tool { width: 34px; height: 34px; border-radius: 6px; }
+  .tool .swatch { width: 18px; height: 18px; }
+  .tool svg { width: 18px; height: 18px; }
+  .toolbar .name { display: none; }
+  .toolbar .status { font-size: 0.8rem; }
+  .toolbar .toggle { font-size: 0.8rem; }
+  .diag { display: none; }
+  .rotate { display: none !important; }
+  .stage { padding: 4px; }
+  .stage canvas { border-radius: 3px; }
+}
+/* Som app på hemskärmen: håll undan för kamerahål och hemindikator. */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.toolbar { padding-top: max(8px, env(safe-area-inset-top)); }
+
 /* Lärarvyn */
 .top {
   display: flex;
