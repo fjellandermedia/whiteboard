@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Whiteboard</title>
+<meta name="description" content="Din egen whiteboard. Det du ritar skickas direkt till lärarens dator.">
+<link rel="stylesheet" href="whiteboard.css">
+</head>
+<body>
+
+<div class="center" id="joinView">
+  <form class="card" id="joinForm">
+    <h1>Whiteboard</h1>
+    <p>Skriv ditt namn så att läraren ser vilken tavla som är din. Det du ritar skickas direkt till lärarens dator.</p>
+    <label>Rumskod
+      <input type="text" id="roomInput" class="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" required>
+    </label>
+    <label>Ditt namn
+      <input type="text" id="nameInput" autocomplete="name" maxlength="40" placeholder="Förnamn">
+    </label>
+    <p class="error" id="joinError" hidden></p>
+    <button type="submit" class="primary" id="joinButton">Gå med</button>
+  </form>
+</div>
+
+<div id="boardView" hidden style="display:contents">
+  <div class="toolbar" id="toolbar">
+    <div class="group" id="colors"></div>
+    <div class="group" id="widths"></div>
+    <div class="group">
+      <button type="button" class="tool" id="eraser" title="Sudd" aria-label="Sudd">
+        <svg viewBox="0 0 24 24"><path d="M16 3l5 5-11 11H5l-3-3L13 5z"/><path d="M8 20h13"/></svg>
+      </button>
+      <button type="button" class="tool" id="undo" title="Ångra (Ctrl+Z)" aria-label="Ångra">
+        <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+      </button>
+      <button type="button" class="tool" id="clear" title="Rensa tavlan" aria-label="Rensa tavlan">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+      </button>
+    </div>
+    <div class="spacer"></div>
+    <label class="toggle" title="Ignorera fingrar när en penna används"><input type="checkbox" id="penOnly"> Bara penna</label>
+    <span class="name" id="myName"></span>
+    <span class="status" id="status">Ansluter…</span>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="canvas" aria-label="Rityta"></canvas>
+  </div>
+</div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="board.js"></script>
+<script src="elev.js"></script>
+</body>
+</html>

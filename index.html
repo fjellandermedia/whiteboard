@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whiteboard: Lärare</title>
+<meta name="description" content="Dela ut whiteboards till eleverna, se dem live, visa en på projektorn och spara allas tavlor som pdf. Allt skickas direkt mellan datorerna.">
+<link rel="stylesheet" href="whiteboard.css">
+</head>
+<body>
+<header class="top">
+  <h1>Whiteboard</h1>
+  <span class="status" id="status">Startar…</span>
+  <span class="status" id="count"></span>
+  <span class="spacer"></span>
+  <div class="actions">
+    <label><input type="checkbox" id="compact"> Liten inbjudan</label>
+    <label>Storlek <input type="range" id="tileSize" min="160" max="640" step="20" value="260"></label>
+    <button type="button" id="clearAll">Ny uppgift</button>
+    <button type="button" id="savePdf" class="primary">Spara alla som pdf</button>
+    <button type="button" id="newRoom" class="danger">Nytt rum</button>
+  </div>
+</header>
+
+<section class="invite" id="invite">
+  <div class="qr" id="qr"></div>
+  <div class="text">
+    <div>Gå till <span class="link" id="link"></span></div>
+    <div>Rumskod <span class="big" id="code"></span></div>
+    <small>Eleverna kan också skanna QR-koden. Det de ritar skickas direkt till den här datorn.</small>
+  </div>
+</section>
+
+<p class="empty" id="empty">Inga elever har anslutit ännu.</p>
+<section class="boards" id="boards"></section>
+
+<div class="viewer" id="viewer" hidden>
+  <div class="bar">
+    <button type="button" id="prev" title="Föregående (←)">←</button>
+    <button type="button" id="next" title="Nästa (→)">→</button>
+    <span class="name" id="viewerName"></span>
+    <button type="button" id="viewerPng">Spara png</button>
+    <button type="button" id="fullscreen">Fullskärm (F)</button>
+    <button type="button" id="close">Stäng (Esc)</button>
+  </div>
+  <div class="stage" id="viewerStage">
+    <canvas id="viewerCanvas"></canvas>
+  </div>
+</div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="board.js"></script>
+<script src="larare.js"></script>
+</body>
+</html>
