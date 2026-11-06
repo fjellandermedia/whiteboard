@@ -54,3 +54,9 @@ läraren själv väljer att ladda ner.
 - [PeerJS](https://peerjs.com/) (MIT), `vendor/peerjs.min.js`
 - [pdf-lib](https://pdf-lib.js.org/) (MIT), `vendor/pdf-lib.min.js`
 - [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), `vendor/qrcode.js`
+
+## Vid uppdatering
+
+Skript- och stilfilerna laddas med en versionsparameter (`?v=…`) i `index.html` och `elev.html`.
+Höj den i båda filerna när du ändrar någon js- eller css-fil, annars kan webbläsare blanda gamla och nya
+filer från cachen och sidan slutar fungera tills cachen går ut.
