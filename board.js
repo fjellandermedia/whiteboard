@@ -180,17 +180,18 @@ function renderLayered(ctx, background, board, w, h, scratch) {
   if (background && !background.isEmpty()) {
     for (const s of background.strokes) drawStroke(ctx, s, w, h);
   }
-  if (!board || board.isEmpty()) return;
   if (!scratch) {
-    for (const s of board.strokes) drawStroke(ctx, s, w, h);
+    if (board) for (const s of board.strokes) drawStroke(ctx, s, w, h);
     return;
   }
+  // Lagret töms alltid, även när tavlan är tom, annars ligger gamla streck
+  // kvar i det och dyker upp igen vid nästa sammansättning.
   if (scratch.width !== w || scratch.height !== h) {
     scratch.width = w;
     scratch.height = h;
   }
-  renderBoard(scratch.getContext('2d'), board, w, h);
-  ctx.drawImage(scratch, 0, 0);
+  renderBoard(scratch.getContext('2d'), board || new Board(), w, h);
+  if (board && !board.isEmpty()) ctx.drawImage(scratch, 0, 0);
 }
 
 // Renderar tavlan till en ny canvas med vit bakgrund, för export.
