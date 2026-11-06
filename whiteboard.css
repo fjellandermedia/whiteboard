@@ -183,6 +183,7 @@ input[type="text"] {
 }
 .texteditor .symbols { display: flex; flex-wrap: wrap; gap: 4px; }
 .texteditor .symbols button { padding: 2px 8px; font-size: 1rem; min-width: 32px; }
+.texteditor .templates button { font-weight: 600; background: var(--bg); min-width: 44px; }
 .texteditor textarea {
   font: 1.1rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--text);

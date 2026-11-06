@@ -386,13 +386,20 @@
       b.addEventListener('click', () => insertSymbol(sym));
       symbols.appendChild(b);
     }
-    for (const snippet of [['x^2', 'Upphöjt'], ['sqrt(x)', 'Roten ur'], ['frac(a,b)', 'Bråk']]) {
+    const templates = $('templates');
+    for (const t of [
+      ['sup', 'x²', 'Upphöjt till. Markera det som ska bli exponent, eller skriv exponenten efteråt.'],
+      ['sub', 'x₁', 'Nedsänkt (index)'],
+      ['sqrt', '√x', 'Roten ur. Markera uttrycket först, eller skriv det efteråt.'],
+      ['frac', 'a⁄b', 'Bråk med täljare och nämnare'],
+    ]) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = snippet[0];
-      b.title = snippet[1];
-      b.addEventListener('click', () => insertSymbol(snippet[0]));
-      symbols.appendChild(b);
+      b.className = 'template';
+      b.textContent = t[1];
+      b.title = t[2];
+      b.addEventListener('click', () => applyTemplate(t[0]));
+      templates.appendChild(b);
     }
     $('textDone').addEventListener('click', commitText);
     $('textCancel').addEventListener('click', closeTextEditor);
@@ -415,6 +422,65 @@
     });
     $('textInput').addEventListener('input', previewText);
     sizeSel.addEventListener('change', previewText);
+  }
+
+  // Lägger in en mattemall runt markerad text, eller med en markerad
+  // platshållare som skrivs över. Läraren behöver inte kunna notationen.
+  function applyTemplate(kind) {
+    const ta = $('textInput');
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const sel = ta.value.slice(start, end);
+    let ins;
+    let selFrom;
+    let selTo;
+    switch (kind) {
+      case 'sup': {
+        const arg = sel || '2';
+        ins = '^{' + arg + '}';
+        selFrom = start + 2;
+        selTo = selFrom + arg.length;
+        break;
+      }
+      case 'sub': {
+        const arg = sel || '1';
+        ins = '_{' + arg + '}';
+        selFrom = start + 2;
+        selTo = selFrom + arg.length;
+        break;
+      }
+      case 'sqrt': {
+        const arg = sel || 'x';
+        ins = 'sqrt(' + arg + ')';
+        selFrom = start + 5;
+        selTo = selFrom + arg.length;
+        break;
+      }
+      case 'frac': {
+        let num = sel || 'a';
+        let den = 'b';
+        const slash = sel.indexOf('/');
+        if (slash > 0) {
+          num = sel.slice(0, slash).trim();
+          den = sel.slice(slash + 1).trim() || 'b';
+        }
+        ins = 'frac(' + num + ', ' + den + ')';
+        selFrom = start + 5;
+        selTo = selFrom + num.length;
+        break;
+      }
+      default:
+        return;
+    }
+    ta.value = ta.value.slice(0, start) + ins + ta.value.slice(end);
+    if (sel) {
+      // Markerad text har satts in i mallen: fortsätt skriva efter den.
+      ta.selectionStart = ta.selectionEnd = start + ins.length;
+    } else {
+      ta.setSelectionRange(selFrom, selTo);
+    }
+    ta.focus();
+    previewText();
   }
 
   function insertSymbol(text) {
@@ -449,10 +515,15 @@
       $('textInput').value = '';
     }
     $('textDelete').hidden = !editingText.existing;
-    // Placera redigeringsrutan vid klicket, men inom ritytan.
+    // Placera redigeringsrutan under texten så att förhandsvisningen syns,
+    // eller ovanför om den inte får plats, men alltid inom ritytan.
     const stageRect = stage.getBoundingClientRect();
-    const left = Math.min(Math.max(0, e.clientX - stageRect.left), stageRect.width - 340);
-    const top = Math.min(Math.max(0, e.clientY - stageRect.top + 12), stageRect.height - 200);
+    const lineGap = Number($('textSize').value) * rect.width * TEXT_LINE_HEIGHT * 2.5;
+    const editorH = 360;
+    const left = Math.min(Math.max(0, e.clientX - stageRect.left), Math.max(0, stageRect.width - 340));
+    let top = e.clientY - stageRect.top + lineGap;
+    if (top + editorH > stageRect.height) top = e.clientY - stageRect.top - editorH - 12;
+    top = Math.min(Math.max(0, top), Math.max(0, stageRect.height - editorH));
     editor.style.left = left + 'px';
     editor.style.top = top + 'px';
     editor.hidden = false;

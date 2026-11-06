@@ -28,9 +28,10 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    senare. Eleverna ritar ovanpå och kan inte sudda bort den. Uppgiften syns i rutnätet, i helskärm
    och i pdf/png. **Ta bort uppgift** tar bort den hos alla. Uppgiften ritas i en egen flik; **← Tavlorna**
    tar dig tillbaka till översikten.
-   Med textverktyget (**T**) klickar du på tavlan och skriver. Matematik skrivs så här: upphöjt `x^2`
-   eller `x^{10}`, nedsänkt `a_1`, roten ur `sqrt(x+1)`, bråk `frac(a,b)`. Symbolraden infogar π, ≤, ×
-   med mera. Klicka på befintlig text för att ändra eller ta bort den.
+   Med textverktyget (**T**) klickar du på tavlan och skriver. Knapparna **x²**, **x₁**, **√x** och
+   **a⁄b** ger upphöjt, nedsänkt, roten ur och bråk: markera text och tryck, eller tryck och skriv över
+   platshållaren. Symbolraden infogar π, ≤, × med mera. Den som vill kan skriva notationen direkt:
+   `x^2`, `x^{10}`, `a_1`, `sqrt(x+1)`, `frac(a,b)`. Klicka på befintlig text för att ändra eller ta bort den.
 7. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Rensa alla** rensar alla
    elevers tavlor men låter uppgiften ligga kvar.
 

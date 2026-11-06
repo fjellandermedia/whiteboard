@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Uppgift: Whiteboard</title>
 <meta name="description" content="Rita en uppgift som visas som bakgrund på alla elevers tavlor.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106m">
+<link rel="stylesheet" href="whiteboard.css?v=20261106n">
 </head>
 <body data-mode="task">
 
@@ -50,6 +50,7 @@
   <div class="stage" id="stage">
     <canvas id="canvas" aria-label="Rityta"></canvas>
     <div class="texteditor" id="textEditor" hidden>
+      <div class="symbols templates" id="templates"></div>
       <div class="symbols" id="symbols"></div>
       <textarea id="textInput" rows="2" placeholder="Skriv här. Enter ger ny rad." spellcheck="false"></textarea>
       <div class="row">
@@ -58,14 +59,14 @@
         <button type="button" id="textCancel">Avbryt</button>
         <button type="button" id="textDelete" class="danger" hidden>Ta bort</button>
       </div>
-      <small>Upphöjt <code>x^2</code>, nedsänkt <code>a_1</code>, roten ur <code>sqrt(x+1)</code>, bråk <code>frac(a,b)</code>. Ctrl+Enter = Klar, Esc = Avbryt.</small>
+      <small>Markera text och tryck på en knapp, eller tryck först och skriv över det markerade. Texten visas på tavlan medan du skriver. Ctrl+Enter = Klar, Esc = Avbryt.</small>
     </div>
   </div>
 </div>
 
-<script src="config.js?v=20261106m"></script>
-<script src="mathtext.js?v=20261106m"></script>
-<script src="board.js?v=20261106m"></script>
-<script src="elev.js?v=20261106m"></script>
+<script src="config.js?v=20261106n"></script>
+<script src="mathtext.js?v=20261106n"></script>
+<script src="board.js?v=20261106n"></script>
+<script src="elev.js?v=20261106n"></script>
 </body>
 </html>
