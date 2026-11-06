@@ -21,6 +21,9 @@
 
   const diag = makeDiag($('diag'));
   diag.add('webbläsare: ' + navigator.userAgent);
+  const background = new Board(); // lärarens uppgift, ritas under alla tavlor
+  const tileScratch = document.createElement('canvas');
+  const viewerScratch = document.createElement('canvas');
   const students = new Map(); // clientId -> student
   const order = []; // clientId i anslutningsordning
   let relay = null;
@@ -154,6 +157,11 @@
           s.board.clear();
           markDirty(s);
         }
+        return;
+      case 'background':
+        background.replace(Array.isArray(msg.strokes) ? msg.strokes : []);
+        for (const s of students.values()) markDirty(s);
+        diag.add(background.isEmpty() ? 'uppgiften togs bort' : 'uppgift mottagen');
         return;
       case 'error':
         diag.add('servern svarade: ' + msg.code + ' ' + (msg.reason || ''));
@@ -304,8 +312,8 @@
     for (const s of students.values()) {
       if (!s.dirty) continue;
       s.dirty = false;
-      renderBoard(s.ctx, s.board, s.canvas.width, s.canvas.height);
-      if (viewing === s.id) renderBoard(viewerCtx, s.board, viewerCanvas.width, viewerCanvas.height);
+      renderLayered(s.ctx, background, s.board, s.canvas.width, s.canvas.height, tileScratch);
+      if (viewing === s.id) renderLayered(viewerCtx, background, s.board, viewerCanvas.width, viewerCanvas.height, viewerScratch);
     }
   }
 
@@ -350,7 +358,7 @@
     if (!viewing) return;
     fitCanvas(viewerCanvas, viewerStage);
     const s = students.get(viewing);
-    if (s) renderBoard(viewerCtx, s.board, viewerCanvas.width, viewerCanvas.height);
+    if (s) renderLayered(viewerCtx, background, s.board, viewerCanvas.width, viewerCanvas.height, viewerScratch);
   }
 
   new ResizeObserver(resizeViewer).observe(viewerStage);
@@ -384,7 +392,7 @@
 
   // ---------- Spara ----------
   function savePng(student) {
-    exportCanvas(student.board, 1600).toBlob((blob) => {
+    exportCanvas(student.board, 1600, background).toBlob((blob) => {
       if (blob) downloadBlob(blob, safeFileName(student.name) + '.png');
     }, 'image/png');
   }
@@ -406,7 +414,7 @@
       const margin = 28;
       const titleH = 22;
       for (const s of list) {
-        const canvas = exportCanvas(s.board, 1600);
+        const canvas = exportCanvas(s.board, 1600, background);
         const bytes = await new Promise((resolve) => canvas.toBlob((b) => b.arrayBuffer().then(resolve), 'image/png'));
         const img = await doc.embedPng(bytes);
         const page = doc.addPage([pageW, pageH]);
@@ -439,9 +447,12 @@
 
   // ---------- Knappar ----------
   $('savePdf').addEventListener('click', saveAllPdf);
+  $('task').addEventListener('click', () => {
+    window.open('uppgift.html#' + room, 'wb-task-' + room);
+  });
   $('clearAll').addEventListener('click', () => {
     if (!students.size) return;
-    if (!confirm('Rensa alla elevers tavlor och börja på en ny uppgift? Spara först om du vill behålla dem.')) return;
+    if (!confirm('Rensa alla elevers tavlor? Uppgiften (bakgrunden) ligger kvar. Spara först om du vill behålla tavlorna.')) return;
     for (const s of students.values()) {
       s.board.clear();
       markDirty(s);

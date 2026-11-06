@@ -159,8 +159,32 @@ function renderBoard(ctx, board, w, h) {
   for (const s of board.strokes) drawStroke(ctx, s, w, h);
 }
 
+// Ritar lärarens uppgift (bakgrund) och elevens streck ovanpå. Elevens streck
+// ritas på ett eget lager så att suddet inte tar bort bakgrunden. `scratch` är
+// en canvas som återanvänds som lager.
+function renderLayered(ctx, background, board, w, h, scratch) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.restore();
+  if (background && !background.isEmpty()) {
+    for (const s of background.strokes) drawStroke(ctx, s, w, h);
+  }
+  if (!board || board.isEmpty()) return;
+  if (!scratch) {
+    for (const s of board.strokes) drawStroke(ctx, s, w, h);
+    return;
+  }
+  if (scratch.width !== w || scratch.height !== h) {
+    scratch.width = w;
+    scratch.height = h;
+  }
+  renderBoard(scratch.getContext('2d'), board, w, h);
+  ctx.drawImage(scratch, 0, 0);
+}
+
 // Renderar tavlan till en ny canvas med vit bakgrund, för export.
-function exportCanvas(board, width = 1600) {
+function exportCanvas(board, width = 1600, background = null) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = Math.round(width / BOARD_ASPECT);
@@ -168,7 +192,7 @@ function exportCanvas(board, width = 1600) {
   const layer = document.createElement('canvas');
   layer.width = canvas.width;
   layer.height = canvas.height;
-  renderBoard(layer.getContext('2d'), board, layer.width, layer.height);
+  renderLayered(layer.getContext('2d'), background, board, layer.width, layer.height, document.createElement('canvas'));
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(layer, 0, 0);

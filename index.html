@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whiteboard: Lärare</title>
 <meta name="description" content="Dela ut whiteboards till eleverna, se dem live, visa en på projektorn och spara allas tavlor som pdf. Tavlorna skickas via en liten reläserver.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106h">
+<link rel="stylesheet" href="whiteboard.css?v=20261106i">
 </head>
 <body>
 <header class="top">
@@ -16,7 +16,8 @@
   <div class="actions">
     <label><input type="checkbox" id="compact"> Liten inbjudan</label>
     <label>Storlek <input type="range" id="tileSize" min="160" max="640" step="20" value="260"></label>
-    <button type="button" id="clearAll">Ny uppgift</button>
+    <button type="button" id="task" title="Rita en uppgift som blir bakgrund på alla elevers tavlor">Uppgift</button>
+    <button type="button" id="clearAll">Rensa alla</button>
     <button type="button" id="savePdf" class="primary">Spara alla som pdf</button>
     <button type="button" id="newRoom" class="danger">Nytt rum</button>
   </div>
@@ -53,10 +54,10 @@
   </div>
 </div>
 
-<script src="vendor/qrcode.js?v=20261106h"></script>
-<script src="vendor/pdf-lib.min.js?v=20261106h"></script>
-<script src="config.js?v=20261106h"></script>
-<script src="board.js?v=20261106h"></script>
-<script src="larare.js?v=20261106h"></script>
+<script src="vendor/qrcode.js?v=20261106i"></script>
+<script src="vendor/pdf-lib.min.js?v=20261106i"></script>
+<script src="config.js?v=20261106i"></script>
+<script src="board.js?v=20261106i"></script>
+<script src="larare.js?v=20261106i"></script>
 </body>
 </html>

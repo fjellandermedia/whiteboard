@@ -21,8 +21,12 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    tavlor kan visas anonymt på projektorn.
 5. **Spara alla som pdf** ger en pdf med en tavla per sida (A4 liggande) med elevens namn.
    Knappen **png** på en tavla sparar bara den tavlan.
-6. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Ny uppgift** rensar alla
-   elevers tavlor. **Nytt rum** ger en ny kod.
+6. **Uppgift** öppnar en egen sida där läraren ritar en uppgift med samma verktyg som eleverna.
+   **Skicka till alla** gör den till bakgrund på alla elevers tavlor, även hos elever som ansluter
+   senare. Eleverna ritar ovanpå och kan inte sudda bort den. Uppgiften syns i rutnätet, i helskärm
+   och i pdf/png. **Ta bort uppgift** tar bort den hos alla.
+7. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Rensa alla** rensar alla
+   elevers tavlor men låter uppgiften ligga kvar. **Nytt rum** ger en ny kod.
 
 Rumskoden och en hemlig nyckel sparas i lärarens webbläsare. Bara den webbläsare som öppnade rummet kan
 se tavlorna, och en omladdning hämtar hela rummet från servern igen. Elevernas streck sparas också lokalt

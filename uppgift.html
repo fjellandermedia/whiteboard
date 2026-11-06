@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Uppgift: Whiteboard</title>
+<meta name="description" content="Rita en uppgift som visas som bakgrund på alla elevers tavlor.">
+<link rel="stylesheet" href="whiteboard.css?v=20261106i">
+</head>
+<body data-mode="task">
+
+<div class="center" id="joinView" hidden>
+  <div class="card">
+    <h1>Uppgift</h1>
+    <p class="error" id="joinError" hidden></p>
+  </div>
+</div>
+
+<div id="boardView" hidden style="display:contents">
+  <div class="toolbar" id="toolbar">
+    <div class="group" id="colors"></div>
+    <div class="group" id="widths"></div>
+    <div class="group">
+      <button type="button" class="tool" id="eraser" title="Sudd" aria-label="Sudd">
+        <svg viewBox="0 0 24 24"><path d="M16 3l5 5-11 11H5l-3-3L13 5z"/><path d="M8 20h13"/></svg>
+      </button>
+      <button type="button" class="tool" id="undo" title="Ångra (Ctrl+Z)" aria-label="Ångra">
+        <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+      </button>
+      <button type="button" class="tool" id="clear" title="Rensa tavlan" aria-label="Rensa tavlan">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+      </button>
+    </div>
+    <div class="spacer"></div>
+    <label class="toggle" title="Ignorera fingrar när en penna används"><input type="checkbox" id="penOnly"> Bara penna</label>
+    <button type="button" id="removeTask" class="danger">Ta bort uppgift</button>
+    <button type="button" id="sendTask" class="primary">Skicka till alla</button>
+    <span class="name" id="myName"></span>
+    <span class="status" id="status">Ansluter…</span>
+  </div>
+  <details class="diag" id="diagBox">
+    <summary>Detaljer om anslutningen</summary>
+    <pre id="diag"></pre>
+  </details>
+  <p class="rotate">Det du ritar här blir bakgrund på alla elevers tavlor när du trycker Skicka till alla.</p>
+  <div class="stage" id="stage">
+    <canvas id="canvas" aria-label="Rityta"></canvas>
+  </div>
+</div>
+
+<script src="config.js?v=20261106i"></script>
+<script src="board.js?v=20261106i"></script>
+<script src="elev.js?v=20261106i"></script>
+</body>
+</html>

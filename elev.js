@@ -18,7 +18,12 @@
   const ctx = canvas.getContext('2d');
   const penOnlyBox = $('penOnly');
 
+  // Sidan används både av elever (elev.html) och av läraren för att rita en
+  // uppgift som blir bakgrund på allas tavlor (uppgift.html).
+  const taskMode = document.body.dataset.mode === 'task';
   const board = new Board();
+  const background = new Board(); // lärarens uppgift, ritas under elevens streck
+  const layer = document.createElement('canvas'); // elevens streck
   const diag = makeDiag($('diag'));
   diag.add('webbläsare: ' + navigator.userAgent);
   let room = '';
@@ -40,11 +45,23 @@
 
   // ---------- Startskärm ----------
   const hashRoom = normalizeRoomCode(decodeURIComponent(location.hash.slice(1)) || new URLSearchParams(location.search).get('rum'));
-  if (hashRoom) roomInput.value = hashRoom;
-  nameInput.value = storage.get('wb-name') || '';
-  if (hashRoom) nameInput.focus(); else roomInput.focus();
+  let roomKey = '';
+  if (taskMode) {
+    room = hashRoom;
+    roomKey = room && room === storage.get('wb-room') ? storage.get('wb-room-key') || '' : '';
+    name = 'Uppgift';
+    if (!room || !roomKey) {
+      joinView.hidden = false;
+      joinError.textContent = 'Öppna uppgiftssidan via knappen Uppgift på lärarsidan.';
+      joinError.hidden = false;
+    }
+  } else {
+    if (hashRoom) roomInput.value = hashRoom;
+    nameInput.value = storage.get('wb-name') || '';
+    if (hashRoom) nameInput.focus(); else roomInput.focus();
+  }
 
-  joinForm.addEventListener('submit', (e) => {
+  joinForm && joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const code = normalizeRoomCode(roomInput.value);
     if (code.length < 4) {
@@ -73,8 +90,12 @@
   function startBoard() {
     joinView.hidden = true;
     boardView.hidden = false;
-    $('myName').textContent = name;
-    document.title = (name ? name + ' – ' : '') + 'Whiteboard ' + room;
+    $('myName').textContent = taskMode ? '' : name;
+    document.title = taskMode ? 'Uppgift – Whiteboard ' + room : (name ? name + ' – ' : '') + 'Whiteboard ' + room;
+    if (taskMode) {
+      $('sendTask').addEventListener('click', sendTask);
+      $('removeTask').addEventListener('click', removeTask);
+    }
     buildToolbar();
     restoreStrokes();
     updateToolbar();
@@ -148,16 +169,30 @@
 
   function resize() {
     fitCanvas(canvas, stage);
-    renderBoard(ctx, board, canvas.width, canvas.height);
+    renderAll();
+  }
+
+  // Bakgrund + elevens lager ritas ihop på den synliga canvasen.
+  function renderAll() {
+    renderLayered(ctx, background, board, canvas.width, canvas.height, layer);
+  }
+
+  // Under ett pågående streck ritas bara det nya på lagret, sedan sätts bilden ihop.
+  function composite() {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    for (const s of background.strokes) drawStroke(ctx, s, w, h);
+    ctx.drawImage(layer, 0, 0);
   }
 
   function redraw() {
-    renderBoard(ctx, board, canvas.width, canvas.height);
+    renderAll();
     updateToolbar();
   }
 
   // ---------- Lokal lagring ----------
-  const storageKey = () => 'wb-strokes-' + room + '-' + tabId;
+  const storageKey = () => (taskMode ? 'wb-task-' + room : 'wb-strokes-' + room + '-' + tabId);
   function restoreStrokes() {
     try {
       const saved = JSON.parse(storage.get(storageKey()) || '{}');
@@ -239,8 +274,10 @@
       points: [pointFrom(e, rect)],
     });
     drawnCount = 0;
-    drawStroke(ctx, current, canvas.width, canvas.height, 0);
+    if (layer.width !== canvas.width || layer.height !== canvas.height) renderAll();
+    drawStroke(layer.getContext('2d'), current, canvas.width, canvas.height, 0);
     drawnCount = 1;
+    composite();
     send({ t: 'ss', s: current });
     pendingPoints = [];
   });
@@ -261,8 +298,9 @@
       added.push(pt);
     }
     if (!added.length) return;
-    drawStroke(ctx, current, canvas.width, canvas.height, drawnCount);
+    drawStroke(layer.getContext('2d'), current, canvas.width, canvas.height, drawnCount);
     drawnCount = current.points.length;
+    composite();
     pendingPoints.push(...added);
     if (!flushTimer) flushTimer = setTimeout(flushPoints, 100);
   });
@@ -309,6 +347,25 @@
     if (notify) send({ t: 'clear' });
   }
 
+  // ---------- Uppgift (bara uppgift.html) ----------
+  function sendTask() {
+    if (current) return;
+    if (!send({ t: 'background', strokes: board.strokes }, true)) {
+      alert('Ingen kontakt med servern just nu. Försök igen om en stund.');
+      return;
+    }
+    setStatus(board.isEmpty() ? 'Uppgiften är borttagen hos alla' : 'Uppgiften är utskickad till alla', 'ok');
+  }
+
+  function removeTask() {
+    if (board.isEmpty() && !confirm('Ta bort uppgiften från allas tavlor?')) return;
+    if (!board.isEmpty() && !confirm('Rensa uppgiften och ta bort den från allas tavlor?')) return;
+    board.clear();
+    redraw();
+    saveStrokes();
+    sendTask();
+  }
+
   // ---------- Anslutning till läraren ----------
   let relay = null;
 
@@ -325,20 +382,35 @@
       return;
     }
     setStatus('Ansluter…', 'warn');
-    const url = base + '/room/' + room + '?role=student&client=' + encodeURIComponent(clientId) + '&name=' + encodeURIComponent(name);
+    const url = taskMode
+      ? base + '/room/' + room + '?role=task&key=' + encodeURIComponent(roomKey)
+      : base + '/room/' + room + '?role=student&client=' + encodeURIComponent(clientId) + '&name=' + encodeURIComponent(name);
     diag.add('ansluter till ' + url.replace(/\?.*$/, ''));
     relay = new RelaySocket(url, {
       onOpen() {
-        send({ t: 'hello', clientId, name, strokes: board.strokes });
+        if (!taskMode) send({ t: 'hello', clientId, name, strokes: board.strokes });
       },
       onMessage(msg) {
         if (!msg || typeof msg !== 'object') return;
         switch (msg.t) {
           case 'ready':
-            setStatus('Ansluten till läraren', 'ok');
+            setStatus(taskMode ? 'Ansluten. Rita uppgiften och skicka ut den.' : 'Ansluten till läraren', 'ok');
+            break;
+          case 'background':
+            if (taskMode) {
+              // Hämta den utskickade uppgiften om det inte finns något lokalt utkast.
+              if (board.isEmpty() && Array.isArray(msg.strokes) && msg.strokes.length) {
+                board.replace(msg.strokes);
+                redraw();
+                saveStrokes();
+              }
+            } else {
+              background.replace(Array.isArray(msg.strokes) ? msg.strokes : []);
+              renderAll();
+            }
             break;
           case 'clear':
-            clearBoard(false);
+            if (!taskMode) clearBoard(false);
             break;
           case 'error':
             diag.add('servern svarade: ' + msg.code + ' ' + (msg.reason || ''));
@@ -373,11 +445,16 @@
     relay.connect();
   }
 
-  function send(msg) {
+  function send(msg, force) {
+    // Uppgiftssidan skickar bara hela uppgiften, inte enskilda streck.
+    if (taskMode && !force) return false;
     return relay ? relay.send(msg) : false;
   }
 
   window.addEventListener('online', () => {
     if (relay && !relay.open) relay.scheduleReconnect(500);
   });
+
+  // Uppgiftssidan startar direkt, utan startskärm.
+  if (taskMode && room && roomKey) startBoard();
 })();

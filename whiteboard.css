@@ -168,6 +168,7 @@ input[type="text"] {
 @media (orientation: portrait) and (max-width: 700px) {
   .rotate { display: block; }
 }
+[data-mode="task"] .rotate { display: block; }
 
 .diag { margin: 6px 12px 0; font-size: 0.85rem; color: var(--muted); }
 .diag summary { cursor: pointer; }

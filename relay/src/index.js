@@ -27,7 +27,9 @@ export class Room {
   constructor(state) {
     this.state = state;
     this.students = null; // clientId -> { name, strokes }
+    this.background = []; // lärarens uppgift
     this.dirty = new Set();
+    this.backgroundDirty = false;
     this.saveTimer = null;
   }
 
@@ -36,6 +38,7 @@ export class Room {
     this.students = new Map();
     const stored = await this.state.storage.list({ prefix: 's:' });
     for (const [key, value] of stored) this.students.set(key.slice(2), value);
+    this.background = (await this.state.storage.get('bg')) || [];
   }
 
   async fetch(request) {
@@ -65,9 +68,21 @@ export class Room {
       await this.touch();
       this.state.acceptWebSocket(server, ['teacher']);
       server.serializeAttachment({ role: 'teacher' });
+      server.send(JSON.stringify({ t: 'background', strokes: this.background }));
       for (const [clientId, s] of this.students) {
         server.send(JSON.stringify({ t: 'hello', clientId, name: s.name, strokes: s.strokes, connected: this.isConnected(clientId) }));
       }
+      server.send(JSON.stringify({ t: 'ready' }));
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
+    if (role === 'task') {
+      // Lärarens uppgiftssida: samma nyckel som lärarvyn.
+      const key = String(url.searchParams.get('key') || '').slice(0, 64);
+      if (!key || !teacherKey || teacherKey !== key) return refuse(4403, 'wrong key');
+      this.state.acceptWebSocket(server, ['task']);
+      server.serializeAttachment({ role: 'task' });
+      server.send(JSON.stringify({ t: 'background', strokes: this.background }));
       server.send(JSON.stringify({ t: 'ready' }));
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -93,6 +108,7 @@ export class Room {
       this.state.acceptWebSocket(server, ['student', clientId]);
       server.serializeAttachment({ role: 'student', clientId });
       this.toTeachers({ t: 'join', clientId, name: student.name });
+      server.send(JSON.stringify({ t: 'background', strokes: this.background }));
       server.send(JSON.stringify({ t: 'ready' }));
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -116,6 +132,7 @@ export class Room {
     }
     if (att.role === 'student') return this.fromStudent(att.clientId, msg);
     if (att.role === 'teacher') return this.fromTeacher(msg);
+    if (att.role === 'task') return this.fromTask(msg);
   }
 
   async webSocketClose(ws) {
@@ -215,6 +232,18 @@ export class Room {
     }
   }
 
+  fromTask(msg) {
+    if (msg.t !== 'background') return;
+    this.background = Array.isArray(msg.strokes) ? msg.strokes.filter(validStroke) : [];
+    trimStrokes({ strokes: this.background });
+    this.backgroundDirty = true;
+    this.markDirty(null);
+    const out = { t: 'background', strokes: this.background };
+    this.toStudents(out);
+    this.toTeachers(out);
+    this.toTasks(out);
+  }
+
   // ---------- Hjälpfunktioner ----------
 
   isConnected(clientId, except) {
@@ -235,6 +264,13 @@ export class Room {
     }
   }
 
+  toTasks(msg) {
+    const text = JSON.stringify(msg);
+    for (const ws of this.state.getWebSockets('task')) {
+      try { ws.send(text); } catch (e) { /* stängd */ }
+    }
+  }
+
   toStudents(msg) {
     const text = JSON.stringify(msg);
     for (const ws of this.state.getWebSockets('student')) {
@@ -247,7 +283,7 @@ export class Room {
   }
 
   markDirty(clientId) {
-    this.dirty.add(clientId);
+    if (clientId) this.dirty.add(clientId);
     if (this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
@@ -264,6 +300,10 @@ export class Room {
       entries['s:' + clientId] = s;
     }
     this.dirty.clear();
+    if (this.backgroundDirty) {
+      entries.bg = this.background;
+      this.backgroundDirty = false;
+    }
     if (Object.keys(entries).length) this.state.storage.put(entries);
   }
 }
