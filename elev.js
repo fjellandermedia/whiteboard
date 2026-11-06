@@ -27,17 +27,7 @@
   async function runNetworkTest() {
     if (netTestRun) return;
     netTestRun = true;
-    $('netTest').disabled = true;
-    diag.add('nätverkstest startar…');
-    try {
-      const all = await testIceServers('all');
-      diag.add('kandidater utan begränsning: ' + (all.join(', ') || 'inga'));
-      const relay = await testIceServers('relay');
-      diag.add('TURN-servrar: ' + (relay.includes('relay') ? 'nåbara' : 'INTE nåbara (' + (relay.join(', ') || 'inga kandidater') + ')'));
-    } catch (e) {
-      diag.add('nätverkstest fel: ' + e);
-    }
-    $('netTest').disabled = false;
+    await runIceTest(diag, $('netTest'));
     netTestRun = false;
   }
   let room = '';

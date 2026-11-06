@@ -20,6 +20,7 @@
 
   const diag = makeDiag($('diag'));
   diag.add('webbläsare: ' + navigator.userAgent);
+  $('netTest').addEventListener('click', () => runIceTest(diag, $('netTest')));
   const students = new Map(); // clientId -> student
   const order = []; // clientId i anslutningsordning
   let peer = null;

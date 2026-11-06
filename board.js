@@ -285,9 +285,13 @@ function watchPeerConnection(pc, diag, label) {
       diag.add(label + ': kandidater klara ' + JSON.stringify(types));
       return;
     }
-    const m = / typ (\w+)/.exec(e.candidate.candidate || '');
+    const cand = e.candidate.candidate || '';
+    const m = / typ (\w+)/.exec(cand);
     const t = m ? m[1] : 'okänd';
     types[t] = (types[t] || 0) + 1;
+    const addr = (/candidate:\S+ \d+ \S+ \d+ (\S+)/.exec(cand) || [])[1] || '';
+    const kind = addr.endsWith('.local') ? 'mDNS-namn' : addr.includes(':') ? 'ipv6' : 'ipv4';
+    diag.add(label + ': kandidat ' + t + ' (' + kind + (/ tcptype/.test(cand) ? ', tcp' : '') + ')');
   });
   pc.addEventListener('signalingstatechange', () => diag.add(label + ': signalering ' + pc.signalingState));
   pc.addEventListener('iceconnectionstatechange', () => diag.add(label + ': ice ' + pc.iceConnectionState));
@@ -296,6 +300,21 @@ function watchPeerConnection(pc, diag, label) {
 }
 
 // Testar om STUN och TURN går att nå. Returnerar vilka kandidattyper som hittades.
+async function runIceTest(diag, button) {
+  if (button) button.disabled = true;
+  diag.add('nätverkstest startar…');
+  try {
+    const all = await testIceServers('all');
+    diag.add('kandidater utan begränsning: ' + (all.join(', ') || 'inga'));
+    diag.add('STUN (egen publik adress): ' + (all.includes('srflx') ? 'ok' : 'INTE nåbar'));
+    const relay = await testIceServers('relay');
+    diag.add('TURN-servrar: ' + (relay.includes('relay') ? 'nåbara' : 'INTE nåbara (' + (relay.join(', ') || 'inga kandidater') + ')'));
+  } catch (e) {
+    diag.add('nätverkstest fel: ' + e);
+  }
+  if (button) button.disabled = false;
+}
+
 async function testIceServers(policy, ms = 7000) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: policy });
   const found = new Set();
