@@ -21,11 +21,20 @@
   const board = new Board();
   let room = '';
   let name = '';
-  let clientId = localStorage.getItem('wb-client-id');
-  if (!clientId) {
-    clientId = randomId();
-    localStorage.setItem('wb-client-id', clientId);
+  // Varje flik är en egen tavla hos läraren: id:t består av en del per
+  // webbläsare (localStorage) och en del per flik (sessionStorage), så att
+  // flera flikar på samma dator inte blandas ihop men en omladdning behåller tavlan.
+  let deviceId = localStorage.getItem('wb-client-id');
+  if (!deviceId) {
+    deviceId = randomId();
+    localStorage.setItem('wb-client-id', deviceId);
   }
+  let tabId = sessionStorage.getItem('wb-tab-id');
+  if (!tabId) {
+    tabId = randomId();
+    sessionStorage.setItem('wb-tab-id', tabId);
+  }
+  const clientId = deviceId + '-' + tabId;
 
   // ---------- Startskärm ----------
   const hashRoom = normalizeRoomCode(decodeURIComponent(location.hash.slice(1)) || new URLSearchParams(location.search).get('rum'));
@@ -66,6 +75,7 @@
     document.title = (name ? name + ' – ' : '') + 'Whiteboard ' + room;
     buildToolbar();
     restoreStrokes();
+    updateToolbar();
     resize();
     new ResizeObserver(resize).observe(stage);
     window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -145,13 +155,27 @@
   }
 
   // ---------- Lokal lagring ----------
-  const storageKey = () => 'wb-strokes-' + room;
+  const storageKey = () => 'wb-strokes-' + room + '-' + tabId;
   function restoreStrokes() {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey()) || '[]');
-      board.replace(saved);
+      const saved = JSON.parse(localStorage.getItem(storageKey()) || '{}');
+      board.replace(Array.isArray(saved.strokes) ? saved.strokes : []);
     } catch (e) {
       board.clear();
+    }
+    pruneOldStrokes();
+  }
+  // Rensa bort sparade tavlor från gamla flikar och lektioner.
+  function pruneOldStrokes() {
+    const limit = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('wb-strokes-') || key === storageKey()) continue;
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || '{}');
+        if (!saved.t || saved.t < limit) localStorage.removeItem(key);
+      } catch (e) {
+        localStorage.removeItem(key);
+      }
     }
   }
   let saveTimer = 0;
@@ -159,7 +183,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(storageKey(), JSON.stringify(board.strokes));
+        localStorage.setItem(storageKey(), JSON.stringify({ t: Date.now(), strokes: board.strokes }));
       } catch (e) {
         /* fullt lagringsutrymme: ignorera */
       }

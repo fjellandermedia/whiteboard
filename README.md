@@ -23,7 +23,7 @@ inga ritningar passerar den. Lärarens dator är "servern", så den måste ha si
 
 Rumskoden sparas i lärarens webbläsare, så om läraren laddar om sidan behåller rummet samma kod
 och eleverna återansluter automatiskt och skickar om sina tavlor. Elevernas ritningar sparas lokalt i deras
-webbläsare per rum, så en omladdning hos eleven tappar inte heller något.
+webbläsare per rum, så en omladdning hos eleven tappar inte heller något. Varje flik räknas som en egen tavla.
 
 ## Hosta på GitHub Pages
 
