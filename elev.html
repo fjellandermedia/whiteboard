@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Whiteboard</title>
-<meta name="description" content="Din egen whiteboard. Det du ritar skickas direkt till lärarens dator.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106e">
+<meta name="description" content="Din egen whiteboard. Det du ritar skickas till lärarens dator.">
+<link rel="stylesheet" href="whiteboard.css?v=20261106f">
 </head>
 <body>
 
 <div class="center" id="joinView">
   <form class="card" id="joinForm">
     <h1>Whiteboard</h1>
-    <p>Skriv ditt namn så att läraren ser vilken tavla som är din. Det du ritar skickas direkt till lärarens dator.</p>
+    <p>Skriv ditt namn så att läraren ser vilken tavla som är din. Det du ritar skickas till lärarens dator.</p>
     <label>Rumskod
       <input type="text" id="roomInput" class="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" required>
     </label>
@@ -46,7 +46,6 @@
   </div>
   <details class="diag" id="diagBox">
     <summary>Detaljer om anslutningen</summary>
-    <button type="button" id="netTest">Testa nätverket</button>
     <pre id="diag"></pre>
   </details>
   <p class="rotate">Vänd telefonen på sidan så blir tavlan större.</p>
@@ -55,8 +54,8 @@
   </div>
 </div>
 
-<script src="vendor/peerjs.min.js?v=20261106e"></script>
-<script src="board.js?v=20261106e"></script>
-<script src="elev.js?v=20261106e"></script>
+<script src="config.js?v=20261106f"></script>
+<script src="board.js?v=20261106f"></script>
+<script src="elev.js?v=20261106f"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
-// Lärarens vy. Den här datorn är "servern": varje elev kopplar upp sig direkt
-// mot lärarens webbläsare via WebRTC (PeerJS). PeerJS:s publika server används
-// bara för att hitta varandra, inga ritningar passerar den.
+// Lärarens vy. Alla elever och läraren är anslutna till samma rum på
+// reläservern, som sparar strecken och skickar dem vidare. Rumskoden och en
+// hemlig nyckel sparas i lärarens webbläsare, så bara den som öppnade rummet
+// kan se tavlorna.
 
 (function () {
   'use strict';
@@ -20,11 +21,11 @@
 
   const diag = makeDiag($('diag'));
   diag.add('webbläsare: ' + navigator.userAgent);
-  $('netTest').addEventListener('click', () => runIceTest(diag, $('netTest')));
   const students = new Map(); // clientId -> student
   const order = []; // clientId i anslutningsordning
-  let peer = null;
+  let relay = null;
   let room = storage.get('wb-room') || '';
+  let roomKey = storage.get('wb-room-key') || '';
   let viewing = null; // clientId som visas i visningsläget
   let needsFrame = false;
 
@@ -55,7 +56,9 @@
 
   function startRoom(code) {
     room = normalizeRoomCode(code) || makeRoomCode();
+    if (!roomKey || room !== storage.get('wb-room')) roomKey = randomId() + randomId();
     storage.set('wb-room', room);
+    storage.set('wb-room-key', roomKey);
     $('code').textContent = room;
     const url = new URL('elev.html', location.href);
     url.hash = room;
@@ -69,141 +72,117 @@
       $('qr').hidden = true;
     }
     document.title = 'Whiteboard ' + room + ': Lärare';
-    openPeer();
+    openRelay();
   }
 
-  let retryTimer = 0;
-  function openPeer() {
-    if (peer) {
-      peer.destroy();
-      peer = null;
+  function openRelay() {
+    if (relay) relay.close();
+    const base = relayBase();
+    if (!base) {
+      setStatus('Reläservern är inte inställd (config.js)', 'err');
+      return;
     }
     setStatus('Ansluter…', 'warn');
-    const p = new Peer(roomPeerId(room), peerOptions());
-    peer = p;
-    p.on('open', (id) => {
-      if (peer !== p) return;
-      diag.add('signaleringsserver ok, rum ' + id);
-      setStatus('Redo, väntar på elever', 'ok');
-      // Be redan anslutna elever skicka om sina tavlor efter en omstart.
-      for (const s of students.values()) sendTo(s, { t: 'resend' });
+    const url = base + '/room/' + room + '?role=teacher&key=' + encodeURIComponent(roomKey);
+    diag.add('ansluter till ' + url.replace(/\?.*$/, ''));
+    const r = new RelaySocket(url, {
+      onOpen() {
+        diag.add('ansluten, hämtar rummet');
+      },
+      onMessage(msg) {
+        if (relay === r) handleMessage(msg);
+      },
+      onClose(code, reason) {
+        if (relay !== r) return false;
+        diag.add('anslutningen stängdes (' + code + (reason ? ' ' + reason : '') + ')');
+        if (code === 4403) {
+          // Koden används redan av någon annan lärare: välj en ny.
+          setStatus('Rumskoden var upptagen, byter kod…', 'warn');
+          storage.remove('wb-room');
+          roomKey = '';
+          setTimeout(() => startRoom(''), 500);
+          return false;
+        }
+        setStatus('Tappade kontakten med servern, försöker igen…', 'warn');
+        for (const s of students.values()) {
+          s.connected = false;
+          updateTile(s);
+        }
+        return true;
+      },
     });
-    p.on('connection', (conn) => {
-      if (peer !== p) return;
-      attach(conn);
-    });
-    p.on('disconnected', () => {
-      if (peer !== p) return;
-      setStatus('Tappade kontakten med servern, försöker igen…', 'warn');
-      scheduleRetry(() => {
-        if (peer === p && !p.destroyed) p.reconnect();
-      });
-    });
-    p.on('error', (err) => {
-      if (peer !== p) return;
-      diag.add('fel: ' + err.type + ' ' + (err.message || ''));
-      if (err.type === 'unavailable-id') {
-        // Koden används redan av någon annan: välj en ny.
-        setStatus('Rumskoden var upptagen, byter kod…', 'warn');
-        storage.remove('wb-room');
-        setTimeout(() => startRoom(''), 500);
-        return;
-      }
-      if (err.type === 'peer-unavailable') return;
-      setStatus('Ingen kontakt med servern, försöker igen…', 'err');
-      scheduleRetry(() => openPeer());
-    });
-  }
-
-  function scheduleRetry(fn) {
-    if (retryTimer) return;
-    retryTimer = setTimeout(() => {
-      retryTimer = 0;
-      fn();
-    }, 3000);
+    relay = r;
+    r.connect();
   }
 
   // ---------- Elever ----------
-  function attach(conn) {
-    const meta = conn.metadata || {};
-    let student = null;
-    const label = (meta.name || 'okänd') + ' (' + String(meta.clientId || conn.peer).slice(-6) + ')';
-    diag.add('förfrågan från ' + label);
-    watchPeerConnection(conn.peerConnection, diag, label);
-    conn.on('open', () => diag.add(label + ': datakanal öppen'));
-
-    function bind(clientId, name) {
-      clientId = String(clientId || '').slice(0, 64) || 'okänd-' + randomId();
-      student = students.get(clientId);
-      if (!student) {
-        student = createStudent(clientId);
-      }
-      if (student.conn && student.conn !== conn) {
-        try { student.conn.close(); } catch (e) { /* ignorera */ }
-      }
-      student.conn = conn;
-      student.connected = true;
-      student.lastSeen = Date.now();
-      if (typeof name === 'string') setName(student, name);
-      updateTile(student);
-    }
-
-    if (meta.clientId) bind(meta.clientId, meta.name);
-
-    conn.on('data', (msg) => {
-      if (!msg || typeof msg !== 'object') return;
-      if (msg.t === 'hello') {
-        bind(msg.clientId || meta.clientId, msg.name);
+  function handleMessage(msg) {
+    if (!msg || typeof msg !== 'object') return;
+    const clientId = typeof msg.clientId === 'string' ? msg.clientId.slice(0, 64) : '';
+    let student = clientId ? students.get(clientId) : null;
+    switch (msg.t) {
+      case 'ready':
+        setStatus('Redo, väntar på elever', 'ok');
+        return;
+      case 'hello':
+        if (!clientId) return;
+        if (!student) student = createStudent(clientId);
+        setName(student, msg.name);
         student.board.replace(Array.isArray(msg.strokes) ? msg.strokes : []);
+        student.connected = msg.connected !== false;
+        updateTile(student);
         markDirty(student);
         return;
-      }
-      if (!student) return;
-      student.lastSeen = Date.now();
-      if (!student.connected && student.conn === conn) {
+      case 'join':
+        if (!clientId) return;
+        if (!student) student = createStudent(clientId);
+        if (typeof msg.name === 'string' && msg.name) setName(student, msg.name);
         student.connected = true;
         updateTile(student);
-      }
-      switch (msg.t) {
-        case 'ss':
-          student.board.start(msg.s);
-          break;
-        case 'sp':
-          student.board.addPoints(msg.id, msg.p);
-          break;
-        case 'se':
-        case 'ping':
-          return;
-        case 'bye':
-          student.connected = false;
-          student.conn = null;
-          updateTile(student);
-          try { conn.close(); } catch (e) { /* ignorera */ }
-          return;
-        case 'undo':
-          if (!student.board.remove(msg.id)) student.board.undo();
-          break;
-        case 'clear':
-          student.board.clear();
-          break;
-        default:
-          return;
-      }
-      markDirty(student);
-    });
-    conn.on('close', () => {
-      if (student && student.conn === conn) {
-        student.connected = false;
-        student.conn = null;
-        updateTile(student);
-      }
-    });
-    conn.on('error', () => {
-      if (student && student.conn === conn) {
+        diag.add('elev ansluten: ' + (student.name || clientId));
+        return;
+      case 'leave':
+        if (!student) return;
         student.connected = false;
         updateTile(student);
-      }
-    });
+        return;
+      case 'removed':
+        if (student) dropStudent(student);
+        return;
+      case 'cleared':
+        for (const s of students.values()) {
+          s.board.clear();
+          markDirty(s);
+        }
+        return;
+      case 'error':
+        diag.add('servern svarade: ' + msg.code + ' ' + (msg.reason || ''));
+        return;
+      default:
+        break;
+    }
+    if (!student) return;
+    switch (msg.t) {
+      case 'ss':
+        student.board.start(msg.s);
+        break;
+      case 'sp':
+        student.board.addPoints(msg.id, msg.p);
+        break;
+      case 'undo':
+        if (!student.board.remove(msg.id)) student.board.undo();
+        break;
+      case 'clear':
+        student.board.clear();
+        break;
+      default:
+        return;
+    }
+    if (!student.connected) {
+      student.connected = true;
+      updateTile(student);
+    }
+    markDirty(student);
   }
 
   function createStudent(clientId) {
@@ -237,9 +216,7 @@
       id: clientId,
       name: '',
       board: new Board(),
-      conn: null,
       connected: false,
-      lastSeen: 0,
       dirty: true,
       tile,
       canvas,
@@ -284,32 +261,18 @@
   }
 
   function removeStudent(student) {
-    if (student.conn) {
-      try { student.conn.close(); } catch (e) { /* ignorera */ }
-    }
+    if (relay) relay.send({ t: 'remove', clientId: student.id });
+    dropStudent(student);
+  }
+
+  function dropStudent(student) {
+    if (!students.has(student.id)) return;
     students.delete(student.id);
     order.splice(order.indexOf(student.id), 1);
     student.tile.remove();
     if (viewing === student.id) closeViewer();
     updateCount();
   }
-
-  function sendTo(student, msg) {
-    if (student.conn && student.conn.open) {
-      try { student.conn.send(msg); } catch (e) { /* ignorera */ }
-    }
-  }
-
-  // Elever som inte hörts av på ett tag markeras som frånkopplade.
-  setInterval(() => {
-    const now = Date.now();
-    for (const s of students.values()) {
-      if (s.connected && now - s.lastSeen > 12000) {
-        s.connected = false;
-        updateTile(s);
-      }
-    }
-  }, 3000);
 
   // ---------- Rendering ----------
   function markDirty(student) {
@@ -447,14 +410,15 @@
     if (!confirm('Rensa alla elevers tavlor och börja på en ny uppgift? Spara först om du vill behålla dem.')) return;
     for (const s of students.values()) {
       s.board.clear();
-      sendTo(s, { t: 'clear' });
       markDirty(s);
     }
+    if (!relay || !relay.send({ t: 'clear' })) alert('Ingen kontakt med servern just nu. Försök igen om en stund.');
   });
   $('newRoom').addEventListener('click', () => {
     if (!confirm('Skapa ett nytt rum med ny kod? Alla elever kopplas bort och tavlorna försvinner från den här vyn.')) return;
-    for (const s of [...students.values()]) removeStudent(s);
+    for (const s of [...students.values()]) dropStudent(s);
     storage.remove('wb-room');
+    roomKey = '';
     startRoom('');
   });
 

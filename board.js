@@ -4,7 +4,6 @@
 // Varje punkt är [x, y, tryck].
 
 const BOARD_ASPECT = 16 / 10;
-const ROOM_PREFIX = 'pdffix-tavla-';
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const PEN_COLORS = [
@@ -31,10 +30,6 @@ function makeRoomCode(length = 5) {
 
 function normalizeRoomCode(text) {
   return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/O/g, '0').replace(/I/g, '1');
-}
-
-function roomPeerId(code) {
-  return ROOM_PREFIX + normalizeRoomCode(code);
 }
 
 function randomId() {
@@ -231,132 +226,6 @@ function timestamp() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
-// Inställningar för PeerJS. Som standard används PeerJS:s publika server bara
-// för att hitta varandra. Vill du köra en egen PeerServer, lägg t.ex. in
-// <script>window.WB_PEER_OPTIONS = { host: 'server.exempel.se', port: 443, path: '/' };</script>
-// före board.js på båda sidorna.
-const ICE_SERVERS = [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  {
-    urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
-    username: 'peerjs',
-    credential: 'peerjsp',
-  },
-  {
-    urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443'],
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-];
-
-function peerOptions() {
-  const custom = window.WB_PEER_OPTIONS || {};
-  return Object.assign({ debug: 1, config: { iceServers: ICE_SERVERS } }, custom);
-}
-
-// Diagnostik: en kort logg som visas för användaren vid problem.
-function makeDiag(el) {
-  const lines = [];
-  const render = () => {
-    if (el) el.textContent = lines.join('\n');
-  };
-  const stamp = () => new Date().toTimeString().slice(0, 8);
-  return {
-    add(text) {
-      lines.push(stamp() + ' ' + text);
-      if (lines.length > 60) lines.shift();
-      render();
-    },
-    text() {
-      return lines.join('\n');
-    },
-  };
-}
-
-// Lyssnar på en RTCPeerConnection och loggar varje steg.
-function watchPeerConnection(pc, diag, label) {
-  if (!pc) {
-    diag.add(label + ': ingen RTCPeerConnection');
-    return;
-  }
-  const types = {};
-  pc.addEventListener('icecandidate', (e) => {
-    if (!e.candidate) {
-      diag.add(label + ': kandidater klara ' + JSON.stringify(types));
-      return;
-    }
-    const info = describeCandidate(e.candidate.candidate);
-    if (!info) return; // Firefox skickar en tom kandidat som slutmarkering
-    types[info.type] = (types[info.type] || 0) + 1;
-    diag.add(label + ': egen kandidat ' + info.text);
-  });
-  // Logga även kandidater som kommer från motparten via signaleringen.
-  const original = pc.addIceCandidate.bind(pc);
-  pc.addIceCandidate = function (candidate, ...rest) {
-    const info = candidate && describeCandidate(candidate.candidate);
-    const result = original(candidate, ...rest);
-    if (info) {
-      Promise.resolve(result).then(
-        () => diag.add(label + ': mottagen kandidat ' + info.text),
-        (err) => diag.add(label + ': mottagen kandidat ' + info.text + ' AVVISAD: ' + (err && err.message ? err.message : err))
-      );
-    }
-    return result;
-  };
-  pc.addEventListener('signalingstatechange', () => diag.add(label + ': signalering ' + pc.signalingState));
-  pc.addEventListener('iceconnectionstatechange', () => diag.add(label + ': ice ' + pc.iceConnectionState));
-  pc.addEventListener('connectionstatechange', () => diag.add(label + ': koppling ' + pc.connectionState));
-  pc.addEventListener('icegatheringstatechange', () => diag.add(label + ': insamling ' + pc.iceGatheringState));
-}
-
-function describeCandidate(cand) {
-  cand = String(cand || '');
-  if (!cand) return null;
-  const m = / typ (\w+)/.exec(cand);
-  const type = m ? m[1] : 'okänd';
-  const addr = (/candidate:\S+ \d+ \S+ \d+ (\S+)/.exec(cand) || [])[1] || '';
-  const kind = addr.endsWith('.local') ? 'mDNS-namn' : addr.includes(':') ? 'ipv6' : 'ipv4';
-  return { type, text: type + ' (' + kind + (/ tcptype/.test(cand) ? ', tcp' : '') + ')' };
-}
-
-// Testar om STUN och TURN går att nå. Returnerar vilka kandidattyper som hittades.
-async function runIceTest(diag, button) {
-  if (button) button.disabled = true;
-  diag.add('nätverkstest startar…');
-  try {
-    const all = await testIceServers('all');
-    diag.add('kandidater utan begränsning: ' + (all.join(', ') || 'inga'));
-    diag.add('STUN (egen publik adress): ' + (all.includes('srflx') ? 'ok' : 'INTE nåbar'));
-    const relay = await testIceServers('relay');
-    diag.add('TURN-servrar: ' + (relay.includes('relay') ? 'nåbara' : 'INTE nåbara (' + (relay.join(', ') || 'inga kandidater') + ')'));
-  } catch (e) {
-    diag.add('nätverkstest fel: ' + e);
-  }
-  if (button) button.disabled = false;
-}
-
-async function testIceServers(policy, ms = 7000) {
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: policy });
-  const found = new Set();
-  pc.createDataChannel('test');
-  const done = new Promise((resolve) => {
-    pc.onicecandidate = (e) => {
-      if (!e.candidate) return resolve();
-      const m = / typ (\w+)/.exec(e.candidate.candidate || '');
-      if (m) found.add(m[1]);
-    };
-    setTimeout(resolve, ms);
-  });
-  try {
-    await pc.setLocalDescription(await pc.createOffer());
-    await done;
-  } catch (e) {
-    found.add('fel: ' + (e && e.message ? e.message : e));
-  }
-  pc.close();
-  return [...found];
-}
-
 // Säker åtkomst till webbläsarens lagring. I vissa lägen (privat surfning i
 // äldre Safari, blockerade cookies) kastar localStorage fel, och då ska sidan
 // ändå fungera, bara utan att komma ihåg något.
@@ -390,3 +259,117 @@ const storage = {
     }
   },
 };
+
+// Diagnostik: en kort logg som visas för användaren vid problem.
+function makeDiag(el) {
+  const lines = [];
+  const render = () => {
+    if (el) el.textContent = lines.join('\n');
+  };
+  const stamp = () => new Date().toTimeString().slice(0, 8);
+  return {
+    add(text) {
+      lines.push(stamp() + ' ' + text);
+      if (lines.length > 60) lines.shift();
+      render();
+    },
+  };
+}
+
+// Adressen till reläservern. Sätts i config.js efter att reläet publicerats.
+function relayBase() {
+  const base = String(window.WB_RELAY_URL || '').trim().replace(/\/+$/, '');
+  if (!/^(https?|wss?):\/\/[^/]+$/.test(base) || /DITT-KONTO/.test(base)) return null;
+  return base.replace(/^http/, 'ws');
+}
+
+// WebSocket mot reläservern med automatisk återanslutning.
+// handlers: { onOpen(), onMessage(msg), onClose(code, reason), onStatus(text) }
+class RelaySocket {
+  constructor(url, handlers) {
+    this.url = url;
+    this.handlers = handlers || {};
+    this.ws = null;
+    this.timer = 0;
+    this.delay = 1000;
+    this.stopped = false;
+    this.pingTimer = 0;
+  }
+  connect() {
+    if (this.stopped) return;
+    this.clearTimer();
+    if (this.ws) {
+      this.ws.onclose = null;
+      try { this.ws.close(); } catch (e) { /* ignorera */ }
+    }
+    let ws;
+    try {
+      ws = new WebSocket(this.url);
+    } catch (e) {
+      this.emit('onStatus', 'Ogiltig reläadress');
+      return;
+    }
+    this.ws = ws;
+    ws.onopen = () => {
+      if (this.ws !== ws) return;
+      this.delay = 1000;
+      this.emit('onOpen');
+      clearInterval(this.pingTimer);
+      this.pingTimer = setInterval(() => this.send({ t: 'ping' }), 20000);
+    };
+    ws.onmessage = (e) => {
+      if (this.ws !== ws) return;
+      let msg;
+      try { msg = JSON.parse(e.data); } catch (err) { return; }
+      if (msg && msg.t === 'pong') return;
+      this.emit('onMessage', msg);
+    };
+    ws.onclose = (e) => {
+      if (this.ws !== ws) return;
+      this.ws = null;
+      clearInterval(this.pingTimer);
+      const permanent = this.emit('onClose', e.code, e.reason) === false;
+      if (!permanent) this.scheduleReconnect();
+    };
+    ws.onerror = () => { /* onclose följer alltid */ };
+  }
+  scheduleReconnect(delay) {
+    if (this.stopped) return;
+    this.clearTimer();
+    this.timer = setTimeout(() => {
+      this.timer = 0;
+      this.connect();
+    }, delay || this.delay);
+    this.delay = Math.min(15000, this.delay * 1.6);
+  }
+  clearTimer() {
+    clearTimeout(this.timer);
+    this.timer = 0;
+  }
+  get open() {
+    return !!this.ws && this.ws.readyState === WebSocket.OPEN;
+  }
+  send(msg) {
+    if (!this.open) return false;
+    try {
+      this.ws.send(JSON.stringify(msg));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  close() {
+    this.stopped = true;
+    this.clearTimer();
+    clearInterval(this.pingTimer);
+    if (this.ws) {
+      this.ws.onclose = null;
+      try { this.ws.close(); } catch (e) { /* ignorera */ }
+      this.ws = null;
+    }
+  }
+  emit(name, ...args) {
+    const fn = this.handlers[name];
+    return fn ? fn(...args) : undefined;
+  }
+}

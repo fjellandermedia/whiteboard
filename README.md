@@ -1,11 +1,11 @@
 # Whiteboard
 
 Varje elev får en egen whiteboard i webbläsaren. Läraren ser alla tavlor live, kan visa en av dem
-på projektorn och spara allas tavlor som en pdf. Sidan är helt statisk och kan hostas på GitHub Pages.
+på projektorn och spara allas tavlor som en pdf. Själva sidan är statisk och ligger på GitHub Pages.
 
-Ritningarna skickas direkt från elevens webbläsare till lärarens dator med WebRTC (PeerJS).
-Det finns ingen egen server: PeerJS:s publika server används bara för att webbläsarna ska hitta varandra,
-inga ritningar passerar den. Lärarens dator är "servern", så den måste ha sidan öppen under lektionen.
+Strecken går via en liten reläserver som körs som en Cloudflare Worker. Den sparar varje elevs tavla
+i upp till en vecka och skickar strecken vidare till läraren, allt över vanlig https (WebSocket), så den
+fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå räcker gott för en skola.
 
 ## Så här används den
 
@@ -19,41 +19,70 @@ inga ritningar passerar den. Lärarens dator är "servern", så den måste ha si
    piltangenterna, **F** för fullskärm och **Esc** för att stänga. Visningen uppdateras live.
 5. **Spara alla som pdf** ger en pdf med en tavla per sida (A4 liggande) med elevens namn.
    Knappen **png** på en tavla sparar bara den tavlan.
-6. **Ny uppgift** rensar alla elevers tavlor. **Nytt rum** ger en ny kod och kopplar bort alla.
+6. **Ny uppgift** rensar alla elevers tavlor. **Nytt rum** ger en ny kod.
 
-Rumskoden sparas i lärarens webbläsare, så om läraren laddar om sidan behåller rummet samma kod
-och eleverna återansluter automatiskt och skickar om sina tavlor. Elevernas ritningar sparas lokalt i deras
-webbläsare per rum, så en omladdning hos eleven tappar inte heller något. Varje flik räknas som en egen tavla.
+Rumskoden och en hemlig nyckel sparas i lärarens webbläsare. Bara den webbläsare som öppnade rummet kan
+se tavlorna, och en omladdning hämtar hela rummet från servern igen. Elevernas streck sparas också lokalt
+i deras webbläsare, så en omladdning hos eleven tappar inget. Varje flik räknas som en egen tavla.
 
-## Hosta på GitHub Pages
+## Installation
 
-Repot behöver ingen byggprocess. Slå på GitHub Pages för grenen `main` under *Settings → Pages*,
-så finns sidan på `https://<användare>.github.io/whiteboard/`. Elevlänken blir då
-`https://<användare>.github.io/whiteboard/elev.html#KOD`.
+### 1. Sidan på GitHub Pages
 
-WebRTC kräver https (eller `localhost`), vilket GitHub Pages ger.
+Slå på GitHub Pages för grenen `main` under *Settings → Pages*. Sidan hamnar på
+`https://<användare>.github.io/whiteboard/`.
 
-## Om skolans nätverk strular
+### 2. Reläservern på Cloudflare
 
-Direktkopplingen mellan datorerna fungerar normalt på samma wifi. Blockerar nätverket den publika
-PeerJS-servern (`0.peerjs.com`) kan du köra en egen [PeerServer](https://github.com/peers/peerjs-server)
-och peka ut den genom att lägga in detta före `board.js` i både `index.html` och `elev.html`:
+Reläet ligger i mappen `relay/` och publiceras som en Worker på ett (gratis) Cloudflare-konto.
+Välj ett av två sätt.
 
-```html
-<script>window.WB_PEER_OPTIONS = { host: 'din-server.exempel.se', port: 443, path: '/' };</script>
+**Från Cloudflares webbsida, utan att installera något:**
+
+1. Logga in på [dash.cloudflare.com](https://dash.cloudflare.com), gå till *Compute (Workers)* och välj
+   *Create → Import a repository* (anslut GitHub om du inte gjort det och välj repot `whiteboard`).
+2. Ange **Root directory** `relay`, lämna byggkommandot tomt och sätt **Deploy command** till
+   `npx wrangler deploy`. Projektnamnet kan vara `whiteboard-relay`.
+3. När första publiceringen är klar visas adressen, till exempel
+   `https://whiteboard-relay.<ditt-konto>.workers.dev`. Varje push till `main` publicerar reläet igen.
+
+**Från terminalen:**
+
+```bash
+cd relay
+npm install
+npx wrangler login
+npx wrangler deploy
 ```
+
+Sista kommandot skriver ut adressen till reläet.
+
+### 3. Peka sidan mot reläet
+
+Öppna `config.js` och byt platshållaren mot reläets adress:
+
+```js
+window.WB_RELAY_URL = window.WB_RELAY_URL || 'https://whiteboard-relay.ditt-konto.workers.dev';
+```
+
+Det går bra att göra direkt på GitHub: öppna filen, klicka på pennan, ändra, och spara (commit).
+Vänta någon minut och ladda om lärarsidan hårt (Ctrl+Shift+R). Status ska då bli "Redo, väntar på elever".
+
+Du kan kontrollera att reläet svarar genom att öppna reläadressen i webbläsaren: den ska visa
+`{"name":"whiteboard-relay","ok":true}`.
 
 ## Personuppgifter
 
-Namnet eleven skriver in och det eleven ritar skickas bara till lärarens dator, aldrig till någon server.
-Namnet sparas i elevens egen webbläsare för att slippa skrivas igen. Inget sparas hos läraren utöver det
-läraren själv väljer att ladda ner.
+Det eleven skriver som namn och ritar skickas via reläservern till läraren och sparas där i upp till en
+vecka efter att rummet senast användes, därefter raderas det automatiskt. Reläet körs på ditt eget
+Cloudflare-konto och inga andra kan läsa rummet utan lärarens nyckel. Be eleverna skriva förnamn eller
+smeknamn. Namnet sparas också i elevens egen webbläsare för att slippa skrivas igen.
 
 ## Bibliotek
 
-- [PeerJS](https://peerjs.com/) (MIT), `vendor/peerjs.min.js`
 - [pdf-lib](https://pdf-lib.js.org/) (MIT), `vendor/pdf-lib.min.js`
 - [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), `vendor/qrcode.js`
+- [wrangler](https://developers.cloudflare.com/workers/wrangler/) (Apache 2.0) för att publicera reläet
 
 ## Vid uppdatering
 

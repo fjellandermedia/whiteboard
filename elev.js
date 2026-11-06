@@ -1,6 +1,6 @@
-// Elevens whiteboard. Strecken lagras lokalt i webbläsaren och skickas till
-// lärarens dator via WebRTC (PeerJS). Läraren får hela tavlan vid varje
-// (åter)anslutning, så inget går förlorat om läraren laddar om sin sida.
+// Elevens whiteboard. Strecken lagras lokalt i webbläsaren och skickas via
+// reläservern till läraren. Hela tavlan skickas vid varje (åter)anslutning,
+// så inget går förlorat om kontakten bryts.
 
 (function () {
   'use strict';
@@ -21,15 +21,6 @@
   const board = new Board();
   const diag = makeDiag($('diag'));
   diag.add('webbläsare: ' + navigator.userAgent);
-  diag.add('WebRTC: ' + (window.RTCPeerConnection ? 'finns' : 'SAKNAS'));
-  $('netTest').addEventListener('click', runNetworkTest);
-  let netTestRun = false;
-  async function runNetworkTest() {
-    if (netTestRun) return;
-    netTestRun = true;
-    await runIceTest(diag, $('netTest'));
-    netTestRun = false;
-  }
   let room = '';
   let name = '';
   // Varje flik är en egen tavla hos läraren: id:t består av en del per
@@ -319,10 +310,7 @@
   }
 
   // ---------- Anslutning till läraren ----------
-  let peer = null;
-  let conn = null;
-  let retryTimer = 0;
-  let retryDelay = 1500;
+  let relay = null;
 
   function setStatus(text, cls) {
     statusEl.textContent = text;
@@ -331,100 +319,65 @@
   }
 
   function connect() {
-    setStatus('Ansluter…', 'warn');
-    peer = new Peer(undefined, peerOptions());
-    peer.on('open', (id) => {
-      diag.add('signaleringsserver ok, eget id ' + id);
-      openConnection();
-    });
-    peer.on('disconnected', () => {
-      setStatus('Tappade kontakten, försöker igen…', 'warn');
-      scheduleRetry();
-    });
-    peer.on('error', (err) => {
-      diag.add('fel: ' + err.type + ' ' + (err.message || ''));
-      if (err.type === 'peer-unavailable') {
-        setStatus('Läraren är inte ansluten ännu, väntar…', 'warn');
-      } else {
-        setStatus('Ingen kontakt med servern, försöker igen…', 'err');
-      }
-      scheduleRetry();
-    });
-  }
-
-  function openConnection() {
-    if (conn) {
-      try { conn.close(); } catch (e) { /* ignorera */ }
-      conn = null;
+    const base = relayBase();
+    if (!base) {
+      setStatus('Reläservern är inte inställd (config.js)', 'err');
+      return;
     }
-    setStatus('Söker läraren…', 'warn');
-    const c = peer.connect(roomPeerId(room), {
-      reliable: true,
-      serialization: 'json',
-      metadata: { clientId, name },
+    setStatus('Ansluter…', 'warn');
+    const url = base + '/room/' + room + '?role=student&client=' + encodeURIComponent(clientId) + '&name=' + encodeURIComponent(name);
+    diag.add('ansluter till ' + url.replace(/\?.*$/, ''));
+    relay = new RelaySocket(url, {
+      onOpen() {
+        send({ t: 'hello', clientId, name, strokes: board.strokes });
+      },
+      onMessage(msg) {
+        if (!msg || typeof msg !== 'object') return;
+        switch (msg.t) {
+          case 'ready':
+            setStatus('Ansluten till läraren', 'ok');
+            break;
+          case 'clear':
+            clearBoard(false);
+            break;
+          case 'error':
+            diag.add('servern svarade: ' + msg.code + ' ' + (msg.reason || ''));
+            break;
+          default:
+            break;
+        }
+      },
+      onClose(code, reason) {
+        diag.add('anslutningen stängdes (' + code + (reason ? ' ' + reason : '') + ')');
+        if (code === 4404) {
+          setStatus('Läraren har inte öppnat rummet ännu, väntar…', 'warn');
+          relay.scheduleReconnect(5000);
+          return false;
+        }
+        if (code === 4000) {
+          setStatus('Tavlan öppnades i en annan flik', 'err');
+          return false;
+        }
+        if (code === 4001) {
+          setStatus('Läraren tog bort din tavla. Ladda om sidan för att gå med igen.', 'err');
+          return false;
+        }
+        if (code === 4400 || code === 4403) {
+          setStatus('Kunde inte gå med i rummet (' + (reason || code) + ')', 'err');
+          return false;
+        }
+        setStatus('Tappade kontakten, försöker igen…', 'warn');
+        return true;
+      },
     });
-    conn = c;
-    diag.add('skickar förfrågan till ' + roomPeerId(room));
-    watchPeerConnection(c.peerConnection, diag, 'koppling');
-    let openTimer = setTimeout(() => {
-      if (conn === c && !c.open) setStatus('Hittar inte fram till läraren, försöker igen…', 'warn');
-      if (conn === c && !c.open) {
-        scheduleRetry();
-        runNetworkTest();
-      }
-    }, 15000);
-    c.on('iceStateChanged', (state) => {
-      if (conn !== c || c.open) return;
-      setStatus('Kopplar upp mot läraren… (' + state + ')', 'warn');
-    });
-    c.on('open', () => {
-      if (conn !== c) return;
-      clearTimeout(openTimer);
-      retryDelay = 1500;
-      setStatus('Ansluten till läraren', 'ok');
-      send({ t: 'hello', clientId, name, strokes: board.strokes });
-    });
-    c.on('data', (msg) => {
-      if (conn !== c || !msg || typeof msg !== 'object') return;
-      if (msg.t === 'clear') clearBoard(false);
-      else if (msg.t === 'resend') send({ t: 'hello', clientId, name, strokes: board.strokes });
-    });
-    c.on('close', () => {
-      if (conn !== c) return;
-      clearTimeout(openTimer);
-      setStatus('Läraren försvann, väntar…', 'warn');
-      scheduleRetry();
-    });
-    c.on('error', () => {
-      if (conn !== c) return;
-      scheduleRetry();
-    });
-  }
-
-  function scheduleRetry() {
-    if (retryTimer) return;
-    retryTimer = setTimeout(() => {
-      retryTimer = 0;
-      if (!peer || peer.destroyed) {
-        connect();
-      } else if (peer.disconnected) {
-        peer.reconnect();
-      } else {
-        openConnection();
-      }
-      retryDelay = Math.min(10000, retryDelay * 1.5);
-    }, retryDelay);
+    relay.connect();
   }
 
   function send(msg) {
-    if (conn && conn.open) {
-      try { conn.send(msg); } catch (e) { /* skickas igen vid återanslutning */ }
-    }
+    return relay ? relay.send(msg) : false;
   }
 
-  window.addEventListener('online', () => scheduleRetry());
-
-  // Hjärtslag så att läraren ser om en elev försvinner, och ett hejdå vid stängning.
-  setInterval(() => send({ t: 'ping' }), 4000);
-  window.addEventListener('pagehide', () => send({ t: 'bye' }));
+  window.addEventListener('online', () => {
+    if (relay && !relay.open) relay.scheduleReconnect(500);
+  });
 })();

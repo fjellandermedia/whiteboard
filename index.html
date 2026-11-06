@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whiteboard: Lärare</title>
-<meta name="description" content="Dela ut whiteboards till eleverna, se dem live, visa en på projektorn och spara allas tavlor som pdf. Allt skickas direkt mellan datorerna.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106e">
+<meta name="description" content="Dela ut whiteboards till eleverna, se dem live, visa en på projektorn och spara allas tavlor som pdf. Tavlorna skickas via en liten reläserver.">
+<link rel="stylesheet" href="whiteboard.css?v=20261106f">
 </head>
 <body>
 <header class="top">
@@ -27,13 +27,12 @@
   <div class="text">
     <div>Gå till <span class="link" id="link"></span></div>
     <div>Rumskod <span class="big" id="code"></span></div>
-    <small>Eleverna kan också skanna QR-koden. Det de ritar skickas direkt till den här datorn.</small>
+    <small>Eleverna kan också skanna QR-koden. Det de ritar visas här direkt.</small>
   </div>
 </section>
 
 <details class="diag" id="diagBox">
   <summary>Detaljer om anslutningar</summary>
-  <button type="button" id="netTest">Testa nätverket</button>
   <pre id="diag"></pre>
 </details>
 
@@ -54,10 +53,10 @@
   </div>
 </div>
 
-<script src="vendor/peerjs.min.js?v=20261106e"></script>
-<script src="vendor/qrcode.js?v=20261106e"></script>
-<script src="vendor/pdf-lib.min.js?v=20261106e"></script>
-<script src="board.js?v=20261106e"></script>
-<script src="larare.js?v=20261106e"></script>
+<script src="vendor/qrcode.js?v=20261106f"></script>
+<script src="vendor/pdf-lib.min.js?v=20261106f"></script>
+<script src="config.js?v=20261106f"></script>
+<script src="board.js?v=20261106f"></script>
+<script src="larare.js?v=20261106f"></script>
 </body>
 </html>
