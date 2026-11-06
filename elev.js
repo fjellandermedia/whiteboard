@@ -19,6 +19,27 @@
   const penOnlyBox = $('penOnly');
 
   const board = new Board();
+  const diag = makeDiag($('diag'));
+  diag.add('webbläsare: ' + navigator.userAgent);
+  diag.add('WebRTC: ' + (window.RTCPeerConnection ? 'finns' : 'SAKNAS'));
+  $('netTest').addEventListener('click', runNetworkTest);
+  let netTestRun = false;
+  async function runNetworkTest() {
+    if (netTestRun) return;
+    netTestRun = true;
+    $('netTest').disabled = true;
+    diag.add('nätverkstest startar…');
+    try {
+      const all = await testIceServers('all');
+      diag.add('kandidater utan begränsning: ' + (all.join(', ') || 'inga'));
+      const relay = await testIceServers('relay');
+      diag.add('TURN-servrar: ' + (relay.includes('relay') ? 'nåbara' : 'INTE nåbara (' + (relay.join(', ') || 'inga kandidater') + ')'));
+    } catch (e) {
+      diag.add('nätverkstest fel: ' + e);
+    }
+    $('netTest').disabled = false;
+    netTestRun = false;
+  }
   let room = '';
   let name = '';
   // Varje flik är en egen tavla hos läraren: id:t består av en del per
@@ -316,17 +337,22 @@
   function setStatus(text, cls) {
     statusEl.textContent = text;
     statusEl.className = 'status ' + cls;
+    diag.add('status: ' + text);
   }
 
   function connect() {
     setStatus('Ansluter…', 'warn');
     peer = new Peer(undefined, peerOptions());
-    peer.on('open', () => openConnection());
+    peer.on('open', (id) => {
+      diag.add('signaleringsserver ok, eget id ' + id);
+      openConnection();
+    });
     peer.on('disconnected', () => {
       setStatus('Tappade kontakten, försöker igen…', 'warn');
       scheduleRetry();
     });
     peer.on('error', (err) => {
+      diag.add('fel: ' + err.type + ' ' + (err.message || ''));
       if (err.type === 'peer-unavailable') {
         setStatus('Läraren är inte ansluten ännu, väntar…', 'warn');
       } else {
@@ -348,9 +374,14 @@
       metadata: { clientId, name },
     });
     conn = c;
+    diag.add('skickar förfrågan till ' + roomPeerId(room));
+    watchPeerConnection(c.peerConnection, diag, 'koppling');
     let openTimer = setTimeout(() => {
       if (conn === c && !c.open) setStatus('Hittar inte fram till läraren, försöker igen…', 'warn');
-      if (conn === c && !c.open) scheduleRetry();
+      if (conn === c && !c.open) {
+        scheduleRetry();
+        runNetworkTest();
+      }
     }, 15000);
     c.on('iceStateChanged', (state) => {
       if (conn !== c || c.open) return;

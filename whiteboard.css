@@ -169,6 +169,11 @@ input[type="text"] {
   .rotate { display: block; }
 }
 
+.diag { margin: 6px 12px 0; font-size: 0.85rem; color: var(--muted); }
+.diag summary { cursor: pointer; }
+.diag pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; max-height: 30vh; overflow: auto; }
+.diag button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
+
 /* Lärarvyn */
 .top {
   display: flex;

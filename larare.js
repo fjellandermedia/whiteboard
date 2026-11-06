@@ -18,6 +18,8 @@
   const TILE_W = 640;
   const TILE_H = TILE_W / BOARD_ASPECT;
 
+  const diag = makeDiag($('diag'));
+  diag.add('webbläsare: ' + navigator.userAgent);
   const students = new Map(); // clientId -> student
   const order = []; // clientId i anslutningsordning
   let peer = null;
@@ -47,6 +49,7 @@
   function setStatus(text, cls) {
     statusEl.textContent = text;
     statusEl.className = 'status ' + cls;
+    diag.add('status: ' + text);
   }
 
   function startRoom(code) {
@@ -77,8 +80,9 @@
     setStatus('Ansluter…', 'warn');
     const p = new Peer(roomPeerId(room), peerOptions());
     peer = p;
-    p.on('open', () => {
+    p.on('open', (id) => {
       if (peer !== p) return;
+      diag.add('signaleringsserver ok, rum ' + id);
       setStatus('Redo, väntar på elever', 'ok');
       // Be redan anslutna elever skicka om sina tavlor efter en omstart.
       for (const s of students.values()) sendTo(s, { t: 'resend' });
@@ -96,6 +100,7 @@
     });
     p.on('error', (err) => {
       if (peer !== p) return;
+      diag.add('fel: ' + err.type + ' ' + (err.message || ''));
       if (err.type === 'unavailable-id') {
         // Koden används redan av någon annan: välj en ny.
         setStatus('Rumskoden var upptagen, byter kod…', 'warn');
@@ -121,6 +126,10 @@
   function attach(conn) {
     const meta = conn.metadata || {};
     let student = null;
+    const label = (meta.name || 'okänd') + ' (' + String(meta.clientId || conn.peer).slice(-6) + ')';
+    diag.add('förfrågan från ' + label);
+    watchPeerConnection(conn.peerConnection, diag, label);
+    conn.on('open', () => diag.add(label + ': datakanal öppen'));
 
     function bind(clientId, name) {
       clientId = String(clientId || '').slice(0, 64) || 'okänd-' + randomId();

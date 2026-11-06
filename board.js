@@ -235,8 +235,87 @@ function timestamp() {
 // för att hitta varandra. Vill du köra en egen PeerServer, lägg t.ex. in
 // <script>window.WB_PEER_OPTIONS = { host: 'server.exempel.se', port: 443, path: '/' };</script>
 // före board.js på båda sidorna.
+const ICE_SERVERS = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  {
+    urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
+    username: 'peerjs',
+    credential: 'peerjsp',
+  },
+  {
+    urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443'],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
+
 function peerOptions() {
-  return Object.assign({ debug: 1 }, window.WB_PEER_OPTIONS || {});
+  const custom = window.WB_PEER_OPTIONS || {};
+  return Object.assign({ debug: 1, config: { iceServers: ICE_SERVERS } }, custom);
+}
+
+// Diagnostik: en kort logg som visas för användaren vid problem.
+function makeDiag(el) {
+  const lines = [];
+  const render = () => {
+    if (el) el.textContent = lines.join('\n');
+  };
+  const stamp = () => new Date().toTimeString().slice(0, 8);
+  return {
+    add(text) {
+      lines.push(stamp() + ' ' + text);
+      if (lines.length > 60) lines.shift();
+      render();
+    },
+    text() {
+      return lines.join('\n');
+    },
+  };
+}
+
+// Lyssnar på en RTCPeerConnection och loggar varje steg.
+function watchPeerConnection(pc, diag, label) {
+  if (!pc) {
+    diag.add(label + ': ingen RTCPeerConnection');
+    return;
+  }
+  const types = {};
+  pc.addEventListener('icecandidate', (e) => {
+    if (!e.candidate) {
+      diag.add(label + ': kandidater klara ' + JSON.stringify(types));
+      return;
+    }
+    const m = / typ (\w+)/.exec(e.candidate.candidate || '');
+    const t = m ? m[1] : 'okänd';
+    types[t] = (types[t] || 0) + 1;
+  });
+  pc.addEventListener('signalingstatechange', () => diag.add(label + ': signalering ' + pc.signalingState));
+  pc.addEventListener('iceconnectionstatechange', () => diag.add(label + ': ice ' + pc.iceConnectionState));
+  pc.addEventListener('connectionstatechange', () => diag.add(label + ': koppling ' + pc.connectionState));
+  pc.addEventListener('icegatheringstatechange', () => diag.add(label + ': insamling ' + pc.iceGatheringState));
+}
+
+// Testar om STUN och TURN går att nå. Returnerar vilka kandidattyper som hittades.
+async function testIceServers(policy, ms = 7000) {
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: policy });
+  const found = new Set();
+  pc.createDataChannel('test');
+  const done = new Promise((resolve) => {
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) return resolve();
+      const m = / typ (\w+)/.exec(e.candidate.candidate || '');
+      if (m) found.add(m[1]);
+    };
+    setTimeout(resolve, ms);
+  });
+  try {
+    await pc.setLocalDescription(await pc.createOffer());
+    await done;
+  } catch (e) {
+    found.add('fel: ' + (e && e.message ? e.message : e));
+  }
+  pc.close();
+  return [...found];
 }
 
 // Säker åtkomst till webbläsarens lagring. I vissa lägen (privat surfning i
