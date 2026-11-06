@@ -7,7 +7,7 @@
 const MAX_NAME = 40;
 const MAX_STROKE_JSON = 900_000; // tecken per elev, hålls under lagringsgränsen
 const ROOM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // rum rensas efter en veckas tystnad
-const SAVE_DELAY_MS = 3000;
+const SAVE_DELAY_MS = 10000;
 
 export default {
   async fetch(request, env) {

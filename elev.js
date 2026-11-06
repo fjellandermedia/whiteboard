@@ -264,7 +264,7 @@
     drawStroke(ctx, current, canvas.width, canvas.height, drawnCount);
     drawnCount = current.points.length;
     pendingPoints.push(...added);
-    if (!flushTimer) flushTimer = setTimeout(flushPoints, 40);
+    if (!flushTimer) flushTimer = setTimeout(flushPoints, 100);
   });
 
   function finishStroke(e) {
