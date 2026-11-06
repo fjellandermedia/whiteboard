@@ -57,7 +57,9 @@ class Board {
     for (const s of strokes || []) this.start(s);
   }
   start(stroke) {
-    if (!stroke || !stroke.id || !Array.isArray(stroke.points)) return;
+    if (!stroke || !stroke.id) return;
+    if (stroke.tool === 'text') return this.startText(stroke);
+    if (!Array.isArray(stroke.points)) return;
     const copy = {
       id: String(stroke.id),
       tool: stroke.tool === 'eraser' ? 'eraser' : 'pen',
@@ -73,6 +75,32 @@ class Board {
     }
     this.byId.set(copy.id, copy);
     return copy;
+  }
+  // Textobjekt (se mathtext.js): { id, tool: 'text', x, y, size, color, text }
+  startText(item) {
+    if (typeof item.text !== 'string') return;
+    const clamp = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Number(v))) : d);
+    const copy = {
+      id: String(item.id),
+      tool: 'text',
+      x: clamp(item.x, 0, 1, 0.1),
+      y: clamp(item.y, 0, 1, 0.1),
+      size: clamp(item.size, 0.01, 0.12, TEXT_SIZES[1].value),
+      color: typeof item.color === 'string' ? item.color : '#1d1d1b',
+      text: item.text.slice(0, 1000),
+      points: [],
+    };
+    if (this.byId.has(copy.id)) {
+      const old = this.byId.get(copy.id);
+      this.strokes[this.strokes.indexOf(old)] = copy;
+    } else {
+      this.strokes.push(copy);
+    }
+    this.byId.set(copy.id, copy);
+    return copy;
+  }
+  hasText() {
+    return this.strokes.some((s) => s.tool === 'text');
   }
   addPoints(id, points) {
     const s = this.byId.get(String(id));
@@ -127,6 +155,10 @@ function widthFactor(pressure, tool) {
 // `from` anger från vilket punktindex ritningen ska fortsätta, så att ett
 // pågående streck kan ritas inkrementellt.
 function drawStroke(ctx, s, w, h, from = 0) {
+  if (s.tool === 'text') {
+    drawTextItem(ctx, s, w, h);
+    return;
+  }
   const pts = s.points;
   if (!pts.length) return;
   ctx.save();
@@ -161,12 +193,23 @@ function drawStroke(ctx, s, w, h, from = 0) {
   ctx.restore();
 }
 
+// Ritar en lista med streck: pennstreck och sudd i ordning, därefter text,
+// så att suddet aldrig tar bort text.
+function drawStrokes(ctx, strokes, w, h) {
+  let hasText = false;
+  for (const s of strokes) {
+    if (s.tool === 'text') hasText = true;
+    else drawStroke(ctx, s, w, h);
+  }
+  if (hasText) for (const s of strokes) if (s.tool === 'text') drawTextItem(ctx, s, w, h);
+}
+
 function renderBoard(ctx, board, w, h) {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
   ctx.restore();
-  for (const s of board.strokes) drawStroke(ctx, s, w, h);
+  drawStrokes(ctx, board.strokes, w, h);
 }
 
 // Ritar lärarens uppgift (bakgrund) och elevens streck ovanpå. Elevens streck
@@ -177,11 +220,9 @@ function renderLayered(ctx, background, board, w, h, scratch) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
   ctx.restore();
-  if (background && !background.isEmpty()) {
-    for (const s of background.strokes) drawStroke(ctx, s, w, h);
-  }
+  if (background && !background.isEmpty()) drawStrokes(ctx, background.strokes, w, h);
   if (!scratch) {
-    if (board) for (const s of board.strokes) drawStroke(ctx, s, w, h);
+    if (board) drawStrokes(ctx, board.strokes, w, h);
     return;
   }
   // Lagret töms alltid, även när tavlan är tom, annars ligger gamla streck

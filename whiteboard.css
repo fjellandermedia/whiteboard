@@ -163,6 +163,39 @@ input[type="text"] {
   cursor: crosshair;
 }
 .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.9rem; }
+.stage { position: relative; }
+.texteditor {
+  position: absolute;
+  width: 340px;
+  max-width: calc(100% - 16px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+  touch-action: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.texteditor .symbols { display: flex; flex-wrap: wrap; gap: 4px; }
+.texteditor .symbols button { padding: 2px 8px; font-size: 1rem; min-width: 32px; }
+.texteditor textarea {
+  font: 1.1rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  resize: vertical;
+}
+.texteditor .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.texteditor select { font: inherit; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+.texteditor small { color: var(--muted); }
+.texteditor code { font-size: 0.85em; }
 
 .rotate { display: none; margin: 8px 12px 0; color: var(--muted); font-size: 0.9rem; text-align: center; }
 @media (orientation: portrait) and (max-width: 700px) {

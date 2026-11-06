@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Uppgift: Whiteboard</title>
 <meta name="description" content="Rita en uppgift som visas som bakgrund på alla elevers tavlor.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106l">
+<link rel="stylesheet" href="whiteboard.css?v=20261106m">
 </head>
 <body data-mode="task">
 
@@ -23,6 +23,9 @@
     <div class="group">
       <button type="button" class="tool" id="eraser" title="Sudd" aria-label="Sudd">
         <svg viewBox="0 0 24 24"><path d="M16 3l5 5-11 11H5l-3-3L13 5z"/><path d="M8 20h13"/></svg>
+      </button>
+      <button type="button" class="tool" id="textTool" title="Text (klicka på tavlan och skriv)" aria-label="Text">
+        <svg viewBox="0 0 24 24"><path d="M5 5h14"/><path d="M12 5v14"/><path d="M9 19h6"/></svg>
       </button>
       <button type="button" class="tool" id="undo" title="Ångra (Ctrl+Z)" aria-label="Ångra">
         <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
@@ -46,11 +49,23 @@
   <p class="rotate">Det du ritar här blir bakgrund på alla elevers tavlor när du trycker Skicka till alla. Översikten med allas tavlor ligger kvar i fliken bredvid.</p>
   <div class="stage" id="stage">
     <canvas id="canvas" aria-label="Rityta"></canvas>
+    <div class="texteditor" id="textEditor" hidden>
+      <div class="symbols" id="symbols"></div>
+      <textarea id="textInput" rows="2" placeholder="Skriv här. Enter ger ny rad." spellcheck="false"></textarea>
+      <div class="row">
+        <select id="textSize" title="Textstorlek"></select>
+        <button type="button" id="textDone" class="primary">Klar</button>
+        <button type="button" id="textCancel">Avbryt</button>
+        <button type="button" id="textDelete" class="danger" hidden>Ta bort</button>
+      </div>
+      <small>Upphöjt <code>x^2</code>, nedsänkt <code>a_1</code>, roten ur <code>sqrt(x+1)</code>, bråk <code>frac(a,b)</code>. Ctrl+Enter = Klar, Esc = Avbryt.</small>
+    </div>
   </div>
 </div>
 
-<script src="config.js?v=20261106l"></script>
-<script src="board.js?v=20261106l"></script>
-<script src="elev.js?v=20261106l"></script>
+<script src="config.js?v=20261106m"></script>
+<script src="mathtext.js?v=20261106m"></script>
+<script src="board.js?v=20261106m"></script>
+<script src="elev.js?v=20261106m"></script>
 </body>
 </html>

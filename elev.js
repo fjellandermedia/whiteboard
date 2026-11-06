@@ -117,8 +117,9 @@
       b.innerHTML = `<span class="swatch" style="background:${c.value}"></span>`;
       b.addEventListener('click', () => {
         color = c.value;
-        tool = 'pen';
+        if (tool !== 'text') tool = 'pen';
         updateToolbar();
+        if (typeof previewText === 'function') previewText();
       });
       b.dataset.color = c.value;
       colors.appendChild(b);
@@ -144,6 +145,13 @@
       tool = tool === 'eraser' ? 'pen' : 'eraser';
       updateToolbar();
     });
+    if ($('textTool')) {
+      $('textTool').addEventListener('click', () => {
+        tool = tool === 'text' ? 'pen' : 'text';
+        updateToolbar();
+      });
+      setupTextEditor();
+    }
     $('undo').addEventListener('click', undo);
     $('clear').addEventListener('click', () => {
       if (board.isEmpty() || confirm('Rensa hela tavlan?')) clearBoard(true);
@@ -159,12 +167,14 @@
 
   function updateToolbar() {
     for (const b of document.querySelectorAll('#colors .tool')) {
-      b.classList.toggle('active', tool === 'pen' && b.dataset.color === color);
+      b.classList.toggle('active', (tool === 'pen' || tool === 'text') && b.dataset.color === color);
     }
     for (const b of document.querySelectorAll('#widths .tool')) {
       b.classList.toggle('active', tool === 'pen' && Number(b.dataset.width) === width);
     }
     $('eraser').classList.toggle('active', tool === 'eraser');
+    if ($('textTool')) $('textTool').classList.toggle('active', tool === 'text');
+    canvas.style.cursor = tool === 'text' ? 'text' : 'crosshair';
     $('undo').disabled = board.isEmpty();
   }
 
@@ -183,7 +193,7 @@
     const w = canvas.width;
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    for (const s of background.strokes) drawStroke(ctx, s, w, h);
+    drawStrokes(ctx, background.strokes, w, h);
     ctx.drawImage(layer, 0, 0);
   }
 
@@ -264,6 +274,10 @@
     if (ignore(e) || activePointer !== null) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
+    if (tool === 'text') {
+      openTextEditorAt(e);
+      return;
+    }
     activePointer = e.pointerId;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignorera */ }
     const rect = canvas.getBoundingClientRect();
@@ -314,6 +328,8 @@
     activePointer = null;
     saveStrokes();
     updateToolbar();
+    // Text ligger alltid överst: rita om när ett streck korsat text.
+    if (board.hasText()) renderAll();
   }
   canvas.addEventListener('pointerup', finishStroke);
   canvas.addEventListener('pointercancel', finishStroke);
@@ -346,6 +362,132 @@
     redraw();
     saveStrokes();
     if (notify) send({ t: 'clear' });
+  }
+
+  // ---------- Textverktyg (bara uppgift.html) ----------
+  const TEXT_SYMBOLS = ['√', 'π', '²', '³', '½', '×', '·', '÷', '±', '≤', '≥', '≠', '≈', '°', '∞', '∠', 'Δ', 'α', 'β', 'θ', '→'];
+  let editingText = null; // { id, x, y } för textobjektet som redigeras
+
+  function setupTextEditor() {
+    const sizeSel = $('textSize');
+    for (const t of TEXT_SIZES) {
+      const o = document.createElement('option');
+      o.value = String(t.value);
+      o.textContent = t.name;
+      if (t.id === 'medium') o.selected = true;
+      sizeSel.appendChild(o);
+    }
+    const symbols = $('symbols');
+    for (const sym of TEXT_SYMBOLS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = sym;
+      b.title = 'Infoga ' + sym;
+      b.addEventListener('click', () => insertSymbol(sym));
+      symbols.appendChild(b);
+    }
+    for (const snippet of [['x^2', 'Upphöjt'], ['sqrt(x)', 'Roten ur'], ['frac(a,b)', 'Bråk']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = snippet[0];
+      b.title = snippet[1];
+      b.addEventListener('click', () => insertSymbol(snippet[0]));
+      symbols.appendChild(b);
+    }
+    $('textDone').addEventListener('click', commitText);
+    $('textCancel').addEventListener('click', closeTextEditor);
+    $('textDelete').addEventListener('click', () => {
+      if (editingText && editingText.existing) {
+        board.remove(editingText.id);
+        redraw();
+        saveStrokes();
+      }
+      closeTextEditor();
+    });
+    $('textInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeTextEditor();
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        commitText();
+      }
+    });
+    $('textInput').addEventListener('input', previewText);
+    sizeSel.addEventListener('change', previewText);
+  }
+
+  function insertSymbol(text) {
+    const ta = $('textInput');
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = start + text.length;
+    ta.focus();
+    previewText();
+  }
+
+  function openTextEditorAt(e) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (e.clientY - rect.top) * (canvas.height / rect.height);
+    // Klick på befintlig text öppnar den för redigering.
+    let hit = null;
+    for (const item of board.strokes) {
+      if (item.tool !== 'text') continue;
+      const b = textItemBounds(ctx, item, canvas.width, canvas.height);
+      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) hit = item;
+    }
+    const editor = $('textEditor');
+    if (hit) {
+      editingText = { id: hit.id, x: hit.x, y: hit.y, existing: true, original: hit };
+      $('textInput').value = hit.text;
+      $('textSize').value = String(hit.size);
+      color = hit.color;
+    } else {
+      editingText = { id: randomId(), x: px / canvas.width, y: py / canvas.height, existing: false };
+      $('textInput').value = '';
+    }
+    $('textDelete').hidden = !editingText.existing;
+    // Placera redigeringsrutan vid klicket, men inom ritytan.
+    const stageRect = stage.getBoundingClientRect();
+    const left = Math.min(Math.max(0, e.clientX - stageRect.left), stageRect.width - 340);
+    const top = Math.min(Math.max(0, e.clientY - stageRect.top + 12), stageRect.height - 200);
+    editor.style.left = left + 'px';
+    editor.style.top = top + 'px';
+    editor.hidden = false;
+    updateToolbar();
+    $('textInput').focus();
+    previewText();
+  }
+
+  // Visar texten på tavlan medan den skrivs.
+  function previewText() {
+    if (!editingText) return;
+    const text = $('textInput').value;
+    const item = { id: editingText.id, tool: 'text', x: editingText.x, y: editingText.y, size: Number($('textSize').value), color, text };
+    renderAll();
+    if (text.trim()) drawTextItem(ctx, item, canvas.width, canvas.height);
+  }
+
+  function commitText() {
+    if (!editingText) return;
+    const text = $('textInput').value.replace(/\s+$/, '');
+    if (!text.trim()) {
+      if (editingText.existing) board.remove(editingText.id);
+    } else {
+      board.start({ id: editingText.id, tool: 'text', x: editingText.x, y: editingText.y, size: Number($('textSize').value), color, text });
+    }
+    editingText = null;
+    $('textEditor').hidden = true;
+    redraw();
+    saveStrokes();
+  }
+
+  function closeTextEditor() {
+    editingText = null;
+    $('textEditor').hidden = true;
+    redraw();
   }
 
   // ---------- Uppgift (bara uppgift.html) ----------

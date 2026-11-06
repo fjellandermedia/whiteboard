@@ -313,7 +313,9 @@ function validPoint(p) {
 }
 
 function validStroke(s) {
-  return s && typeof s === 'object' && typeof s.id === 'string' && Array.isArray(s.points);
+  if (!s || typeof s !== 'object' || typeof s.id !== 'string') return false;
+  if (s.tool === 'text') return typeof s.text === 'string';
+  return Array.isArray(s.points);
 }
 
 function replaceOrPush(strokes, stroke) {
