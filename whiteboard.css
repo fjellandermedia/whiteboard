@@ -208,6 +208,14 @@ input[type="text"] {
   font-weight: 700;
 }
 .invite .text { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.invite .coderow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.invite .coderow button { font-size: 0.9rem; padding: 4px 10px; }
+.invite .codeform { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.invite .codeform label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.invite .codeform input { font-size: 1.3rem; letter-spacing: 0.15em; text-transform: uppercase; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.invite .codeform .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.invite .codeform .error { color: var(--err); margin: 0; }
+.invite.compact .coderow button, .invite.compact .codeform { display: none; }
 .invite .text small { color: var(--muted); }
 .invite .link { font-size: 1.1rem; word-break: break-all; user-select: all; }
 .invite .qr { background: #fff; padding: 8px; border-radius: 8px; line-height: 0; }

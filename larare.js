@@ -28,7 +28,8 @@
   const order = []; // clientId i anslutningsordning
   let relay = null;
   let room = storage.get('wb-room') || '';
-  let roomKey = storage.get('wb-room-key') || '';
+  let roomKey = '';
+  let codeChosen = false; // true när läraren själv skrivit in koden
   let viewing = null; // clientId som visas i visningsläget
   let needsFrame = false;
 
@@ -57,12 +58,14 @@
     diag.add('status: ' + text);
   }
 
-  function startRoom(code) {
+  function startRoom(code, chosen) {
     room = normalizeRoomCode(code) || makeRoomCode();
-    if (!roomKey || room !== storage.get('wb-room')) roomKey = randomId() + randomId();
+    codeChosen = !!chosen;
+    roomKey = roomKeyFor(room) || randomId() + randomId();
     storage.set('wb-room', room);
-    storage.set('wb-room-key', roomKey);
+    storage.set('wb-room-key:' + room, roomKey);
     $('code').textContent = room;
+    $('codeInput').value = room;
     const url = new URL('elev.html', location.href);
     url.hash = room;
     $('link').textContent = url.href.replace(/^https?:\/\//, '');
@@ -99,10 +102,15 @@
         if (relay !== r) return false;
         diag.add('anslutningen stängdes (' + code + (reason ? ' ' + reason : '') + ')');
         if (code === 4403) {
-          // Koden används redan av någon annan lärare: välj en ny.
+          // Koden ägs av en annan webbläsare på det här reläet.
+          storage.remove('wb-room-key:' + room);
+          if (codeChosen) {
+            setStatus('Koden används redan av någon annan', 'err');
+            showCodeForm('Koden ' + room + ' används redan av en annan lärare (eller av dig i en annan webbläsare). Välj en annan kod, eller vänta: ett rum som inte används på en vecka blir ledigt igen.');
+            return false;
+          }
           setStatus('Rumskoden var upptagen, byter kod…', 'warn');
           storage.remove('wb-room');
-          roomKey = '';
           setTimeout(() => startRoom(''), 500);
           return false;
         }
@@ -459,12 +467,40 @@
     }
     if (!relay || !relay.send({ t: 'clear' })) alert('Ingen kontakt med servern just nu. Försök igen om en stund.');
   });
-  $('newRoom').addEventListener('click', () => {
-    if (!confirm('Skapa ett nytt rum med ny kod? Alla elever kopplas bort och tavlorna försvinner från den här vyn.')) return;
+  // ---------- Byta rumskod ----------
+  function showCodeForm(error) {
+    $('codeForm').hidden = false;
+    $('codeError').textContent = error || '';
+    $('codeError').hidden = !error;
+    $('codeInput').focus();
+    $('codeInput').select();
+  }
+  function hideCodeForm() {
+    $('codeForm').hidden = true;
+    $('codeInput').value = room;
+  }
+  $('changeCode').addEventListener('click', () => showCodeForm());
+  $('cancelCode').addEventListener('click', hideCodeForm);
+  $('randomCode').addEventListener('click', () => {
+    $('codeInput').value = makeRoomCode();
+    $('codeInput').focus();
+  });
+  $('codeForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = normalizeRoomCode($('codeInput').value);
+    if (code.length < ROOM_CODE_MIN) {
+      showCodeForm('Koden måste ha minst ' + ROOM_CODE_MIN + ' tecken, bara bokstäver A–Z och siffror.');
+      return;
+    }
+    if (code === room) {
+      hideCodeForm();
+      return;
+    }
+    if (students.size && !confirm('Byta till rumskoden ' + code + '? Eleverna i det nuvarande rummet kopplas bort.')) return;
     for (const s of [...students.values()]) dropStudent(s);
-    storage.remove('wb-room');
-    roomKey = '';
-    startRoom('');
+    background.clear();
+    hideCodeForm();
+    startRoom(code, true);
   });
 
   window.addEventListener('beforeunload', (e) => {

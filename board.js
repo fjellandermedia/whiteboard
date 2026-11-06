@@ -28,8 +28,18 @@ function makeRoomCode(length = 5) {
   return out;
 }
 
+const ROOM_CODE_MIN = 2;
+const ROOM_CODE_MAX = 12;
+
+// Rumskoder är versaler och siffror, 2–12 tecken. Läraren kan välja en egen, till exempel 7A.
 function normalizeRoomCode(text) {
-  return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/O/g, '0').replace(/I/g, '1');
+  return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_CODE_MAX);
+}
+
+// Nyckeln som visar att den här webbläsaren äger rummet sparas per kod,
+// så att samma klasskod kan användas lektion efter lektion.
+function roomKeyFor(code) {
+  return storage.get('wb-room-key:' + code) || (code === storage.get('wb-room') ? storage.get('wb-room-key') : '') || '';
 }
 
 function randomId() {

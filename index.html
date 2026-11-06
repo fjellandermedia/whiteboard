@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whiteboard: Lärare</title>
 <meta name="description" content="Dela ut whiteboards till eleverna, se dem live, visa en på projektorn och spara allas tavlor som pdf. Tavlorna skickas via en liten reläserver.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106i">
+<link rel="stylesheet" href="whiteboard.css?v=20261106j">
 </head>
 <body>
 <header class="top">
@@ -19,7 +19,6 @@
     <button type="button" id="task" title="Rita en uppgift som blir bakgrund på alla elevers tavlor">Uppgift</button>
     <button type="button" id="clearAll">Rensa alla</button>
     <button type="button" id="savePdf" class="primary">Spara alla som pdf</button>
-    <button type="button" id="newRoom" class="danger">Nytt rum</button>
   </div>
 </header>
 
@@ -27,7 +26,19 @@
   <div class="qr" id="qr"></div>
   <div class="text">
     <div>Gå till <span class="link" id="link"></span></div>
-    <div>Rumskod <span class="big" id="code"></span></div>
+    <div class="coderow">Rumskod <span class="big" id="code"></span> <button type="button" id="changeCode">Byt kod</button></div>
+    <form class="codeform" id="codeForm" hidden>
+      <label>Ny rumskod, till exempel klassens namn
+        <input type="text" id="codeInput" class="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12">
+      </label>
+      <div class="row">
+        <button type="submit" class="primary">Byt</button>
+        <button type="button" id="randomCode">Slumpa</button>
+        <button type="button" id="cancelCode">Avbryt</button>
+      </div>
+      <small>2–12 bokstäver eller siffror. Koden sparas i den här webbläsaren så att du kan använda samma kod varje gång. Eleverna kopplas bort när du byter.</small>
+      <p class="error" id="codeError" hidden></p>
+    </form>
     <small>Eleverna kan också skanna QR-koden. Det de ritar visas här direkt.</small>
   </div>
 </section>
@@ -54,10 +65,10 @@
   </div>
 </div>
 
-<script src="vendor/qrcode.js?v=20261106i"></script>
-<script src="vendor/pdf-lib.min.js?v=20261106i"></script>
-<script src="config.js?v=20261106i"></script>
-<script src="board.js?v=20261106i"></script>
-<script src="larare.js?v=20261106i"></script>
+<script src="vendor/qrcode.js?v=20261106j"></script>
+<script src="vendor/pdf-lib.min.js?v=20261106j"></script>
+<script src="config.js?v=20261106j"></script>
+<script src="board.js?v=20261106j"></script>
+<script src="larare.js?v=20261106j"></script>
 </body>
 </html>

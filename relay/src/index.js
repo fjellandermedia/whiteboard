@@ -12,7 +12,7 @@ const SAVE_DELAY_MS = 10000;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const m = /^\/room\/([A-Z0-9]{4,8})$/.exec(url.pathname);
+    const m = /^\/room\/([A-Z0-9]{2,12})$/.exec(url.pathname);
     if (!m) {
       return new Response(JSON.stringify({ name: 'whiteboard-relay', ok: true }), {
         headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },

@@ -48,7 +48,7 @@
   let roomKey = '';
   if (taskMode) {
     room = hashRoom;
-    roomKey = room && room === storage.get('wb-room') ? storage.get('wb-room-key') || '' : '';
+    roomKey = room ? roomKeyFor(room) : '';
     name = 'Uppgift';
     if (!room || !roomKey) {
       joinView.hidden = false;
@@ -64,7 +64,7 @@
   joinForm && joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const code = normalizeRoomCode(roomInput.value);
-    if (code.length < 4) {
+    if (code.length < ROOM_CODE_MIN) {
       joinError.textContent = 'Skriv rumskoden som står på tavlan.';
       joinError.hidden = false;
       return;

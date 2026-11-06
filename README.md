@@ -9,7 +9,9 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
 
 ## Så här används den
 
-1. Läraren öppnar `index.html`. En rumskod och en QR-kod visas.
+1. Läraren öppnar `index.html`. En rumskod och en QR-kod visas. Med **Byt kod** kan du välja en egen
+   kod, till exempel klassens namn, och använda samma kod varje lektion. Koden hör till den webbläsare
+   som först använde den, så ingen annan kan öppna lärarvyn för samma kod.
 2. Eleverna går till `elev.html` (länken och QR-koden på lärarens sida leder dit med koden ifylld),
    skriver sitt namn och trycker **Gå med**.
 3. Eleverna ritar med penna, finger eller mus. Verktyg: fem färger, tre tjocklekar, sudd, ångra (Ctrl+Z)
@@ -26,10 +28,12 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    senare. Eleverna ritar ovanpå och kan inte sudda bort den. Uppgiften syns i rutnätet, i helskärm
    och i pdf/png. **Ta bort uppgift** tar bort den hos alla.
 7. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Rensa alla** rensar alla
-   elevers tavlor men låter uppgiften ligga kvar. **Nytt rum** ger en ny kod.
+   elevers tavlor men låter uppgiften ligga kvar.
 
-Rumskoden och en hemlig nyckel sparas i lärarens webbläsare. Bara den webbläsare som öppnade rummet kan
-se tavlorna, och en omladdning hämtar hela rummet från servern igen. Elevernas streck sparas också lokalt
+Rumskoden och en hemlig nyckel per kod sparas i lärarens webbläsare. Bara den webbläsare som först
+öppnade rummet kan se tavlorna, och en omladdning hämtar hela rummet från servern igen. Rummet ligger
+kvar på servern i en vecka efter senaste användning, så tavlorna från förra lektionen finns kvar tills du
+trycker **Rensa alla**. Ett rum som inte använts på en vecka blir ledigt för vem som helst igen. Elevernas streck sparas också lokalt
 i deras webbläsare, så en omladdning hos eleven tappar inget. Varje flik räknas som en egen tavla.
 
 ## Installation
