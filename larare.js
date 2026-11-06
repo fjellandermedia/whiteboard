@@ -202,12 +202,16 @@
     png.type = 'button';
     png.textContent = 'png';
     png.title = 'Spara tavlan som png';
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.textContent = 'Rensa';
+    clear.title = 'Rensa den här elevens tavla';
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Ta bort';
     remove.title = 'Ta bort tavlan från vyn';
     remove.hidden = true;
-    meta.append(status, name, png, remove);
+    meta.append(status, name, png, clear, remove);
     tile.append(canvas, meta);
     boardsEl.appendChild(tile);
     emptyEl.hidden = true;
@@ -230,6 +234,7 @@
       openViewer(clientId);
     });
     png.addEventListener('click', () => savePng(student));
+    clear.addEventListener('click', () => clearStudent(student));
     remove.addEventListener('click', () => removeStudent(student));
     students.set(clientId, student);
     order.push(clientId);
@@ -248,7 +253,7 @@
     student.statusEl.className = 'status ' + (student.connected ? 'ok' : 'err');
     student.statusEl.title = student.connected ? 'Ansluten' : 'Frånkopplad';
     student.removeEl.hidden = student.connected;
-    if (viewing === student.id) $('viewerName').textContent = viewerTitle(student);
+    if (viewing === student.id) renderViewerName();
     updateCount();
   }
 
@@ -258,6 +263,17 @@
     countEl.textContent = total ? `${online} av ${total} elever anslutna` : '';
     countEl.className = 'status ' + (total && online === total ? 'ok' : total ? 'warn' : '');
     emptyEl.hidden = total > 0;
+  }
+
+  function clearStudent(student) {
+    if (student.board.isEmpty()) return;
+    if (!confirm('Rensa tavlan för ' + (student.name || 'eleven utan namn') + '? Den rensas även hos eleven.')) return;
+    if (!relay || !relay.send({ t: 'clear-one', clientId: student.id })) {
+      alert('Ingen kontakt med servern just nu. Försök igen om en stund.');
+      return;
+    }
+    student.board.clear();
+    markDirty(student);
   }
 
   function removeStudent(student) {
@@ -298,12 +314,22 @@
     return (student.name || 'Utan namn') + (student.connected ? '' : ' (frånkopplad)');
   }
 
+  // Namnet är dolt när en tavla visas, så att den kan visas anonymt på projektorn.
+  let nameShown = false;
+  function renderViewerName() {
+    const s = students.get(viewing);
+    const el = $('viewerName');
+    el.classList.toggle('shown', nameShown);
+    el.textContent = nameShown && s ? viewerTitle(s) : 'Visa namn';
+  }
+
   function openViewer(clientId) {
     const s = students.get(clientId);
     if (!s) return;
     viewing = clientId;
+    nameShown = false;
     viewer.hidden = false;
-    $('viewerName').textContent = viewerTitle(s);
+    renderViewerName();
     resizeViewer();
   }
 
@@ -329,6 +355,10 @@
 
   new ResizeObserver(resizeViewer).observe(viewerStage);
   $('close').addEventListener('click', closeViewer);
+  $('viewerName').addEventListener('click', () => {
+    nameShown = !nameShown;
+    renderViewerName();
+  });
   $('prev').addEventListener('click', () => stepViewer(-1));
   $('next').addEventListener('click', () => stepViewer(1));
   $('fullscreen').addEventListener('click', toggleFullscreen);
@@ -346,6 +376,10 @@
     else if (e.key === 'ArrowLeft') stepViewer(-1);
     else if (e.key === 'ArrowRight') stepViewer(1);
     else if (e.key.toLowerCase() === 'f') toggleFullscreen();
+    else if (e.key.toLowerCase() === 'n') {
+      nameShown = !nameShown;
+      renderViewerName();
+    }
   });
 
   // ---------- Spara ----------

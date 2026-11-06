@@ -189,6 +189,16 @@ export class Room {
         this.toStudents({ t: 'clear' });
         this.toTeachers({ t: 'cleared' });
         break;
+      case 'clear-one': {
+        const clientId = String(msg.clientId || '');
+        const student = this.students.get(clientId);
+        if (!student) return;
+        student.strokes = [];
+        this.markDirty(clientId);
+        this.toStudent(clientId, { t: 'clear' });
+        this.toTeachers({ t: 'clear', clientId });
+        break;
+      }
       case 'remove': {
         const clientId = String(msg.clientId || '');
         if (!this.students.has(clientId)) return;
@@ -214,6 +224,13 @@ export class Room {
   toTeachers(msg) {
     const text = JSON.stringify(msg);
     for (const ws of this.state.getWebSockets('teacher')) {
+      try { ws.send(text); } catch (e) { /* stängd */ }
+    }
+  }
+
+  toStudent(clientId, msg) {
+    const text = JSON.stringify(msg);
+    for (const ws of this.state.getWebSockets(clientId)) {
       try { ws.send(text); } catch (e) { /* stängd */ }
     }
   }

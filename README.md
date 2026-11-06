@@ -17,9 +17,12 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    automatiskt första gången en penna används.
 4. Läraren ser alla tavlor i ett rutnät. Klicka på en tavla för att visa den stort, bläddra med
    piltangenterna, **F** för fullskärm och **Esc** för att stänga. Visningen uppdateras live.
+   Elevens namn är dolt i visningen tills du klickar på **Visa namn** (eller trycker **N**), så att
+   tavlor kan visas anonymt på projektorn.
 5. **Spara alla som pdf** ger en pdf med en tavla per sida (A4 liggande) med elevens namn.
    Knappen **png** på en tavla sparar bara den tavlan.
-6. **Ny uppgift** rensar alla elevers tavlor. **Nytt rum** ger en ny kod.
+6. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Ny uppgift** rensar alla
+   elevers tavlor. **Nytt rum** ger en ny kod.
 
 Rumskoden och en hemlig nyckel sparas i lärarens webbläsare. Bara den webbläsare som öppnade rummet kan
 se tavlorna, och en omladdning hämtar hela rummet från servern igen. Elevernas streck sparas också lokalt

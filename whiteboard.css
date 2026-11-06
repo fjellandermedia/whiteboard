@@ -260,8 +260,9 @@ input[type="text"] {
   padding: 8px 14px;
   background: rgba(0,0,0,0.6);
 }
-.viewer .bar .name { font-size: 1.3rem; font-weight: 700; flex: 1; }
 .viewer .bar button { background: #222; color: #eee; border-color: #444; }
+.viewer .bar .name { font-size: 1.1rem; color: #aaa; margin-right: auto; }
+.viewer .bar .name.shown { font-size: 1.3rem; font-weight: 700; color: #eee; background: none; border-color: transparent; }
 .viewer .stage { padding: 12px; }
 .viewer canvas { background: #fff; border-radius: 4px; }
 .viewer:fullscreen .bar { position: absolute; left: 0; right: 0; top: 0; opacity: 0; transition: opacity 0.2s; }
