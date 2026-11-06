@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Uppgift: Whiteboard</title>
 <meta name="description" content="Rita en uppgift som visas som bakgrund på alla elevers tavlor.">
-<link rel="stylesheet" href="whiteboard.css?v=20261106k">
+<link rel="stylesheet" href="whiteboard.css?v=20261106l">
 </head>
 <body data-mode="task">
 
@@ -33,6 +33,7 @@
     </div>
     <div class="spacer"></div>
     <label class="toggle" title="Ignorera fingrar när en penna används"><input type="checkbox" id="penOnly"> Bara penna</label>
+    <button type="button" id="backToBoards" title="Tillbaka till översikten med alla tavlor">← Tavlorna</button>
     <button type="button" id="removeTask" class="danger">Ta bort uppgift</button>
     <button type="button" id="sendTask" class="primary">Skicka till alla</button>
     <span class="name" id="myName"></span>
@@ -42,14 +43,14 @@
     <summary>Detaljer om anslutningen</summary>
     <pre id="diag"></pre>
   </details>
-  <p class="rotate">Det du ritar här blir bakgrund på alla elevers tavlor när du trycker Skicka till alla.</p>
+  <p class="rotate">Det du ritar här blir bakgrund på alla elevers tavlor när du trycker Skicka till alla. Översikten med allas tavlor ligger kvar i fliken bredvid.</p>
   <div class="stage" id="stage">
     <canvas id="canvas" aria-label="Rityta"></canvas>
   </div>
 </div>
 
-<script src="config.js?v=20261106k"></script>
-<script src="board.js?v=20261106k"></script>
-<script src="elev.js?v=20261106k"></script>
+<script src="config.js?v=20261106l"></script>
+<script src="board.js?v=20261106l"></script>
+<script src="elev.js?v=20261106l"></script>
 </body>
 </html>

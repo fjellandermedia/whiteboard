@@ -26,7 +26,8 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
 6. **Uppgift** öppnar en egen sida där läraren ritar en uppgift med samma verktyg som eleverna.
    **Skicka till alla** gör den till bakgrund på alla elevers tavlor, även hos elever som ansluter
    senare. Eleverna ritar ovanpå och kan inte sudda bort den. Uppgiften syns i rutnätet, i helskärm
-   och i pdf/png. **Ta bort uppgift** tar bort den hos alla.
+   och i pdf/png. **Ta bort uppgift** tar bort den hos alla. Uppgiften ritas i en egen flik; **← Tavlorna**
+   tar dig tillbaka till översikten.
 7. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Rensa alla** rensar alla
    elevers tavlor men låter uppgiften ligga kvar.
 

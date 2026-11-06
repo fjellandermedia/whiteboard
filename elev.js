@@ -95,6 +95,7 @@
     if (taskMode) {
       $('sendTask').addEventListener('click', sendTask);
       $('removeTask').addEventListener('click', removeTask);
+      $('backToBoards').addEventListener('click', backToBoards);
     }
     buildToolbar();
     restoreStrokes();
@@ -355,6 +356,19 @@
       return;
     }
     setStatus(board.isEmpty() ? 'Uppgiften är borttagen hos alla' : 'Uppgiften är utskickad till alla', 'ok');
+  }
+
+  // Tillbaka till lärarens översikt: den ligger normalt kvar i fliken som
+  // öppnade den här sidan, annars öppnas den här.
+  function backToBoards() {
+    if (window.opener && !window.opener.closed) {
+      try {
+        window.opener.focus();
+        window.close();
+        return;
+      } catch (e) { /* fortsätt nedan */ }
+    }
+    location.href = 'index.html';
   }
 
   function removeTask() {
