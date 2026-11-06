@@ -21,24 +21,24 @@
   const students = new Map(); // clientId -> student
   const order = []; // clientId i anslutningsordning
   let peer = null;
-  let room = localStorage.getItem('wb-room') || '';
+  let room = storage.get('wb-room') || '';
   let viewing = null; // clientId som visas i visningsläget
   let needsFrame = false;
 
   // ---------- Inställningar ----------
   const compactBox = $('compact');
-  compactBox.checked = localStorage.getItem('wb-compact') === '1';
+  compactBox.checked = storage.get('wb-compact') === '1';
   compactBox.addEventListener('change', () => {
-    localStorage.setItem('wb-compact', compactBox.checked ? '1' : '0');
+    storage.set('wb-compact', compactBox.checked ? '1' : '0');
     $('invite').classList.toggle('compact', compactBox.checked);
   });
   $('invite').classList.toggle('compact', compactBox.checked);
 
   const tileSize = $('tileSize');
-  tileSize.value = localStorage.getItem('wb-tile') || '260';
+  tileSize.value = storage.get('wb-tile') || '260';
   const applyTile = () => boardsEl.style.setProperty('--tile', tileSize.value + 'px');
   tileSize.addEventListener('input', () => {
-    localStorage.setItem('wb-tile', tileSize.value);
+    storage.set('wb-tile', tileSize.value);
     applyTile();
   });
   applyTile();
@@ -51,7 +51,7 @@
 
   function startRoom(code) {
     room = normalizeRoomCode(code) || makeRoomCode();
-    localStorage.setItem('wb-room', room);
+    storage.set('wb-room', room);
     $('code').textContent = room;
     const url = new URL('elev.html', location.href);
     url.hash = room;
@@ -99,7 +99,7 @@
       if (err.type === 'unavailable-id') {
         // Koden används redan av någon annan: välj en ny.
         setStatus('Rumskoden var upptagen, byter kod…', 'warn');
-        localStorage.removeItem('wb-room');
+        storage.remove('wb-room');
         setTimeout(() => startRoom(''), 500);
         return;
       }
@@ -444,7 +444,7 @@
   $('newRoom').addEventListener('click', () => {
     if (!confirm('Skapa ett nytt rum med ny kod? Alla elever kopplas bort och tavlorna försvinner från den här vyn.')) return;
     for (const s of [...students.values()]) removeStudent(s);
-    localStorage.removeItem('wb-room');
+    storage.remove('wb-room');
     startRoom('');
   });
 

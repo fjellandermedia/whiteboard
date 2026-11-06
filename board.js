@@ -238,3 +238,37 @@ function timestamp() {
 function peerOptions() {
   return Object.assign({ debug: 1 }, window.WB_PEER_OPTIONS || {});
 }
+
+// Säker åtkomst till webbläsarens lagring. I vissa lägen (privat surfning i
+// äldre Safari, blockerade cookies) kastar localStorage fel, och då ska sidan
+// ändå fungera, bara utan att komma ihåg något.
+const storage = {
+  get(key, session) {
+    try {
+      return (session ? sessionStorage : localStorage).getItem(key);
+    } catch (e) {
+      return null;
+    }
+  },
+  set(key, value, session) {
+    try {
+      (session ? sessionStorage : localStorage).setItem(key, value);
+    } catch (e) {
+      /* ignorera */
+    }
+  },
+  remove(key, session) {
+    try {
+      (session ? sessionStorage : localStorage).removeItem(key);
+    } catch (e) {
+      /* ignorera */
+    }
+  },
+  keys() {
+    try {
+      return Object.keys(localStorage);
+    } catch (e) {
+      return [];
+    }
+  },
+};
