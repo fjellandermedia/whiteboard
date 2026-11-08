@@ -46,15 +46,13 @@
   // ---------- Startskärm ----------
   const hashRoom = normalizeRoomCode(decodeURIComponent(location.hash.slice(1)) || new URLSearchParams(location.search).get('rum'));
   let roomKey = '';
+  // Uppgiftssidan fungerar även utan rum: då kan man förbereda och spara
+  // uppgifter, men inte skicka ut dem.
+  const taskOffline = taskMode && (!hashRoom || !roomKeyFor(hashRoom));
   if (taskMode) {
     room = hashRoom;
     roomKey = room ? roomKeyFor(room) : '';
     name = 'Uppgift';
-    if (!room || !roomKey) {
-      joinView.hidden = false;
-      joinError.textContent = 'Öppna uppgiftssidan via knappen Uppgift på lärarsidan.';
-      joinError.hidden = false;
-    }
   } else {
     roomInput.value = hashRoom || storage.get('wb-last-room') || '';
     nameInput.value = storage.get('wb-name') || '';
@@ -89,7 +87,7 @@
   });
 
   function startBoard() {
-    joinView.hidden = true;
+    if (joinView) joinView.hidden = true;
     boardView.hidden = false;
     $('myName').textContent = taskMode ? '' : name;
     document.title = taskMode ? 'Uppgift – Whiteboard ' + room : (name ? name + ' – ' : '') + 'Whiteboard ' + room;
@@ -97,6 +95,12 @@
       $('sendTask').addEventListener('click', sendTask);
       $('removeTask').addEventListener('click', removeTask);
       $('backToBoards').addEventListener('click', backToBoards);
+      setupSavedTasks();
+      if (taskOffline) {
+        $('sendTask').disabled = true;
+        $('removeTask').disabled = true;
+        $('sendTask').title = 'Öppna uppgiftssidan via knappen Uppgift på lärarsidan för att kunna skicka.';
+      }
     }
     buildToolbar();
     restoreStrokes();
@@ -204,7 +208,7 @@
   }
 
   // ---------- Lokal lagring ----------
-  const storageKey = () => (taskMode ? 'wb-task-' + room : 'wb-strokes-' + room + '-' + tabId);
+  const storageKey = () => (taskMode ? 'wb-task-' + (room || 'utkast') : 'wb-strokes-' + room + '-' + tabId);
   function restoreStrokes() {
     try {
       const saved = JSON.parse(storage.get(storageKey()) || '{}');
@@ -572,6 +576,165 @@
     setStatus(board.isEmpty() ? 'Uppgiften är borttagen hos alla' : 'Uppgiften är utskickad till alla', 'ok');
   }
 
+  // ---------- Sparade uppgifter (i webbläsaren) ----------
+  const SAVED_KEY = 'wb-saved-tasks';
+  let currentSavedId = null;
+
+  function readSaved() {
+    try {
+      const list = JSON.parse(storage.get(SAVED_KEY) || '[]');
+      return Array.isArray(list) ? list.filter((t) => t && t.id && Array.isArray(t.strokes)) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeSaved(list) {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) {
+      alert('Det gick inte att spara: webbläsarens lagringsutrymme är fullt. Ta bort någon sparad uppgift eller exportera dem som filer.');
+      return false;
+    }
+  }
+
+  function renderSavedSelect() {
+    const sel = $('savedSelect');
+    const list = readSaved().sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    const chosen = sel.value;
+    sel.innerHTML = '<option value="">Välj sparad uppgift…</option>';
+    for (const t of list) {
+      const o = document.createElement('option');
+      o.value = t.id;
+      const d = t.updated ? new Date(t.updated) : null;
+      o.textContent = t.name + (d ? ' (' + d.toLocaleDateString('sv-SE') + ')' : '');
+      sel.appendChild(o);
+    }
+    sel.value = list.some((t) => t.id === chosen) ? chosen : currentSavedId || '';
+    const cur = list.find((t) => t.id === currentSavedId);
+    $('savedName').textContent = cur ? 'Laddad: ' + cur.name : '';
+    $('savedName').className = 'status ' + (cur ? 'ok' : '');
+    const has = !!sel.value;
+    $('loadSaved').disabled = !has;
+    $('deleteSaved').disabled = !has;
+  }
+
+  function setupSavedTasks() {
+    renderSavedSelect();
+    $('savedSelect').addEventListener('change', renderSavedSelect);
+    $('loadSaved').addEventListener('click', () => loadSavedTask($('savedSelect').value));
+    $('saveTask').addEventListener('click', () => saveTask(false));
+    $('saveTaskAs').addEventListener('click', () => saveTask(true));
+    $('deleteSaved').addEventListener('click', deleteSavedTask);
+    $('exportTask').addEventListener('click', exportTask);
+    $('importTask').addEventListener('change', (e) => importTasks(e.target.files));
+  }
+
+  function saveTask(asNew) {
+    if (current) return;
+    if (board.isEmpty()) {
+      alert('Tavlan är tom. Rita eller skriv uppgiften först.');
+      return;
+    }
+    const list = readSaved();
+    let entry = asNew ? null : list.find((t) => t.id === currentSavedId);
+    if (!entry) {
+      const suggested = entry ? entry.name : firstTextLine() || 'Uppgift ' + (list.length + 1);
+      const name = prompt('Namn på uppgiften:', suggested);
+      if (name === null) return;
+      entry = { id: randomId(), name: name.trim() || suggested, strokes: [], updated: 0 };
+      list.push(entry);
+    }
+    entry.strokes = JSON.parse(JSON.stringify(board.strokes));
+    entry.updated = Date.now();
+    if (!writeSaved(list)) return;
+    currentSavedId = entry.id;
+    renderSavedSelect();
+    setStatus('Sparade "' + entry.name + '" i den här webbläsaren', 'ok');
+  }
+
+  // Första textraden på tavlan, som förslag till namn.
+  function firstTextLine() {
+    const t = board.strokes.find((s) => s.tool === 'text');
+    return t ? t.text.split('\n')[0].trim().slice(0, 40) : '';
+  }
+
+  function loadSavedTask(id) {
+    const entry = readSaved().find((t) => t.id === id);
+    if (!entry) return;
+    if (!board.isEmpty() && id !== currentSavedId && !confirm('Ersätta det som finns på tavlan med "' + entry.name + '"? Spara först om du vill behålla det.')) return;
+    closeTextEditor();
+    board.replace(entry.strokes);
+    currentSavedId = entry.id;
+    redraw();
+    saveStrokes();
+    renderSavedSelect();
+    setStatus('Laddade "' + entry.name + '". Tryck Skicka till alla när du vill dela ut den.', 'ok');
+  }
+
+  function deleteSavedTask() {
+    const id = $('savedSelect').value;
+    const list = readSaved();
+    const entry = list.find((t) => t.id === id);
+    if (!entry || !confirm('Ta bort den sparade uppgiften "' + entry.name + '"?')) return;
+    writeSaved(list.filter((t) => t.id !== id));
+    if (currentSavedId === id) currentSavedId = null;
+    renderSavedSelect();
+  }
+
+  function exportTask() {
+    const sel = $('savedSelect').value;
+    const list = readSaved();
+    let items;
+    if (sel && !confirm('Exportera bara den valda uppgiften? Avbryt för att exportera alla sparade uppgifter i en fil.')) {
+      items = list;
+    } else if (sel) {
+      items = list.filter((t) => t.id === sel);
+    } else {
+      items = list;
+    }
+    if (!items.length) {
+      if (board.isEmpty()) {
+        alert('Det finns inget att exportera.');
+        return;
+      }
+      items = [{ name: firstTextLine() || 'Uppgift', strokes: board.strokes }];
+    }
+    const data = { whiteboardTasks: items.map((t) => ({ name: t.name, strokes: t.strokes, updated: t.updated || Date.now() })) };
+    const base = items.length === 1 ? safeFileName(items[0].name, 'uppgift') : 'uppgifter';
+    downloadBlob(new Blob([JSON.stringify(data)], { type: 'application/json' }), base + '.json');
+  }
+
+  async function importTasks(files) {
+    const list = readSaved();
+    let added = 0;
+    for (const file of files || []) {
+      try {
+        const data = JSON.parse(await file.text());
+        const items = Array.isArray(data.whiteboardTasks) ? data.whiteboardTasks : Array.isArray(data) ? data : [data];
+        for (const t of items) {
+          if (!t || !Array.isArray(t.strokes)) continue;
+          const probe = new Board();
+          probe.replace(t.strokes);
+          if (probe.isEmpty()) continue;
+          let name = String(t.name || file.name.replace(/\.json$/i, '')).slice(0, 60) || 'Importerad uppgift';
+          while (list.some((x) => x.name === name)) name += ' (kopia)';
+          list.push({ id: randomId(), name, strokes: probe.strokes, updated: Number(t.updated) || Date.now() });
+          added++;
+        }
+      } catch (e) {
+        alert('Kunde inte läsa filen ' + file.name + '.');
+      }
+    }
+    $('importTask').value = '';
+    if (!added) return;
+    if (writeSaved(list)) {
+      renderSavedSelect();
+      setStatus('Importerade ' + added + ' uppgift' + (added === 1 ? '' : 'er'), 'ok');
+    }
+  }
+
   // Tillbaka till lärarens översikt: den ligger normalt kvar i fliken som
   // öppnade den här sidan, annars öppnas den här.
   function backToBoards() {
@@ -604,6 +767,10 @@
   }
 
   function connect() {
+    if (taskOffline) {
+      setStatus('Inte ansluten till något rum. Här kan du förbereda och spara uppgifter.', 'warn');
+      return;
+    }
     const base = relayBase();
     if (!base) {
       setStatus('Reläservern är inte inställd (config.js)', 'err');
@@ -684,5 +851,5 @@
   });
 
   // Uppgiftssidan startar direkt, utan startskärm.
-  if (taskMode && room && roomKey) startBoard();
+  if (taskMode) startBoard();
 })();

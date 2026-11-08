@@ -13,16 +13,9 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-180.png">
 <meta name="theme-color" content="#ffffff">
-<link rel="stylesheet" href="whiteboard.css?v=20261106o">
+<link rel="stylesheet" href="whiteboard.css?v=20261108a">
 </head>
 <body data-mode="task">
-
-<div class="center" id="joinView" hidden>
-  <div class="card">
-    <h1>Uppgift</h1>
-    <p class="error" id="joinError" hidden></p>
-  </div>
-</div>
 
 <div id="boardView" hidden style="display:contents">
   <div class="toolbar" id="toolbar">
@@ -50,6 +43,18 @@
     <span class="name" id="myName"></span>
     <span class="status" id="status">Ansluter…</span>
   </div>
+  <div class="savedbar" id="savedBar">
+    <span class="label">Sparade uppgifter</span>
+    <select id="savedSelect"></select>
+    <button type="button" id="loadSaved">Ladda</button>
+    <button type="button" id="saveTask" title="Spara tavlan som en uppgift i den här webbläsaren">Spara</button>
+    <button type="button" id="saveTaskAs" title="Spara som en ny uppgift">Spara som…</button>
+    <button type="button" id="deleteSaved" class="danger">Ta bort</button>
+    <span class="spacer"></span>
+    <button type="button" id="exportTask" title="Ladda ner som fil för att flytta till en annan dator">Exportera fil</button>
+    <label class="filebtn" title="Läs in uppgifter från en exporterad fil">Importera fil<input type="file" id="importTask" accept=".json,application/json" multiple hidden></label>
+    <span class="status" id="savedName"></span>
+  </div>
   <details class="diag" id="diagBox">
     <summary>Detaljer om anslutningen</summary>
     <pre id="diag"></pre>
@@ -72,9 +77,9 @@
   </div>
 </div>
 
-<script src="config.js?v=20261106o"></script>
-<script src="mathtext.js?v=20261106o"></script>
-<script src="board.js?v=20261106o"></script>
-<script src="elev.js?v=20261106o"></script>
+<script src="config.js?v=20261108a"></script>
+<script src="mathtext.js?v=20261108a"></script>
+<script src="board.js?v=20261108a"></script>
+<script src="elev.js?v=20261108a"></script>
 </body>
 </html>

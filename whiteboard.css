@@ -209,6 +209,29 @@ input[type="text"] {
 .diag pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; max-height: 30vh; overflow: auto; }
 .diag button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
 
+.savedbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.savedbar .label { font-weight: 600; color: var(--muted); }
+.savedbar select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); max-width: 260px; }
+.savedbar button, .savedbar .filebtn { padding: 6px 10px; font-size: 0.9rem; }
+.savedbar .filebtn {
+  display: inline-block;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.savedbar .filebtn:hover { border-color: var(--accent); }
+.savedbar .spacer { flex: 1; }
+
 /* Telefon på sidan: gör verktygsraden kompakt så tavlan får plats. */
 @media (max-height: 520px) {
   .toolbar { padding: 4px 6px; gap: 4px; }
