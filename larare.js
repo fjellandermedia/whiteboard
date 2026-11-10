@@ -68,7 +68,8 @@
     $('codeInput').value = room;
     const url = new URL('elev.html', location.href);
     url.hash = room;
-    $('link').textContent = url.href.replace(/^https?:\/\//, '');
+    $('link').textContent = url.href;
+    $('link').href = url.href;
     try {
       const qr = qrcode(0, 'M');
       qr.addData(url.href);
@@ -479,6 +480,23 @@
 
   // ---------- Knappar ----------
   $('savePdf').addEventListener('click', saveAllPdf);
+  $('copyLink').addEventListener('click', async () => {
+    const link = $('link').href;
+    const b = $('copyLink');
+    try {
+      await navigator.clipboard.writeText(link);
+      b.textContent = 'Kopierad!';
+    } catch (e) {
+      // Utan urklippsåtkomst: markera länken så den kan kopieras med Ctrl+C.
+      const range = document.createRange();
+      range.selectNodeContents($('link'));
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      b.textContent = 'Markerad, tryck Ctrl+C';
+    }
+    setTimeout(() => { b.textContent = 'Kopiera länk'; }, 2000);
+  });
   $('removeAll').addEventListener('click', () => {
     if (!students.size) return;
     if (!confirm('Ta bort alla elever och deras tavlor från rummet? Eleverna kopplas bort och måste gå med igen. Uppgiften ligger kvar. Spara först om du vill behålla tavlorna.')) return;
