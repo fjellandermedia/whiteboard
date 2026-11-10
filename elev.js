@@ -90,6 +90,9 @@
     if (joinView) joinView.hidden = true;
     boardView.hidden = false;
     $('myName').textContent = taskMode ? '' : name;
+    // "Bara penna" är bara meningsfull på enheter med pekskärm.
+    const hasTouch = navigator.maxTouchPoints > 0 || (window.matchMedia && matchMedia('(any-pointer: coarse)').matches);
+    penOnlyBox.closest('.toggle').hidden = !hasTouch && !penSeen;
     document.title = taskMode ? 'Uppgift – Whiteboard ' + room : (name ? name + ' – ' : '') + 'Whiteboard ' + room;
     if (taskMode) {
       $('sendTask').addEventListener('click', sendTask);

@@ -15,8 +15,8 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
 2. Eleverna går till `elev.html` (länken och QR-koden på lärarens sida leder dit med koden ifylld),
    skriver sitt namn och trycker **Gå med**.
 3. Eleverna ritar med penna, finger eller mus. Verktyg: fem färger, tre tjocklekar, sudd, ångra (Ctrl+Z)
-   och rensa. Med **Bara penna** ikryssat ignoreras fingrar, så handflatan inte ritar. Rutan kryssas i
-   automatiskt första gången en penna används.
+   och rensa. På enheter med pekskärm finns rutan **Bara penna**: ikryssad ignoreras fingrar, så
+   handflatan inte ritar. Rutan kryssas i automatiskt första gången en penna används.
 4. Läraren ser alla tavlor i ett rutnät, utan namn: tavlorna heter "Tavla 1", "Tavla 2" och så vidare
    tills du trycker **Visa namn**. Valet gäller fliken tills den stängs. Klicka på en tavla för att visa den stort, bläddra med
    piltangenterna, **F** för fullskärm och **Esc** för att stänga. Visningen uppdateras live.
