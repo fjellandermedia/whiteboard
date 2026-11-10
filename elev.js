@@ -248,6 +248,7 @@
 
   // ---------- Ritning ----------
   let current = null; // pågående streck
+  let draggingText = null; // text som flyttas med textverktyget
   let activePointer = null;
   let pendingPoints = [];
   let flushTimer = 0;
@@ -283,6 +284,16 @@
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     if (tool === 'text') {
+      if (editingText) commitText();
+      const [px, py] = canvasPoint(e);
+      const hit = textAt(px, py);
+      if (hit) {
+        // Dra för att flytta, klicka (utan att dra) för att redigera.
+        activePointer = e.pointerId;
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignorera */ }
+        draggingText = { item: hit, startX: px, startY: py, origX: hit.x, origY: hit.y, moved: false };
+        return;
+      }
       openTextEditorAt(e);
       return;
     }
@@ -306,6 +317,22 @@
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (draggingText && e.pointerId === activePointer) {
+      e.preventDefault();
+      const [px, py] = canvasPoint(e);
+      const d = draggingText;
+      if (!d.moved && Math.hypot(px - d.startX, py - d.startY) > 4 * (window.devicePixelRatio || 1)) d.moved = true;
+      if (d.moved) {
+        d.item.x = Math.min(0.98, Math.max(0, d.origX + (px - d.startX) / canvas.width));
+        d.item.y = Math.min(0.98, Math.max(0, d.origY + (py - d.startY) / canvas.height));
+        renderAll();
+      }
+      return;
+    }
+    if (tool === 'text' && !current && e.pointerType === 'mouse') {
+      const [px, py] = canvasPoint(e);
+      canvas.style.cursor = textAt(px, py) ? 'move' : 'text';
+    }
     if (!current || e.pointerId !== activePointer) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
@@ -329,6 +356,17 @@
   });
 
   function finishStroke(e) {
+    if (draggingText && e.pointerId === activePointer) {
+      const d = draggingText;
+      draggingText = null;
+      activePointer = null;
+      if (d.moved) {
+        saveStrokes();
+      } else {
+        openTextEditorAt(e);
+      }
+      return;
+    }
     if (!current || e.pointerId !== activePointer) return;
     flushPoints();
     send({ t: 'se', id: current.id });
@@ -342,7 +380,7 @@
   canvas.addEventListener('pointerup', finishStroke);
   canvas.addEventListener('pointercancel', finishStroke);
   canvas.addEventListener('lostpointercapture', (e) => {
-    if (current && e.pointerId === activePointer) finishStroke(e);
+    if ((current || draggingText) && e.pointerId === activePointer) finishStroke(e);
   });
 
   function flushPoints() {
@@ -503,15 +541,9 @@
 
   function openTextEditorAt(e) {
     const rect = canvas.getBoundingClientRect();
-    const px = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const py = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const [px, py] = canvasPoint(e);
     // Klick på befintlig text öppnar den för redigering.
-    let hit = null;
-    for (const item of board.strokes) {
-      if (item.tool !== 'text') continue;
-      const b = textItemBounds(ctx, item, canvas.width, canvas.height);
-      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) hit = item;
-    }
+    const hit = textAt(px, py);
     const editor = $('textEditor');
     if (hit) {
       editingText = { id: hit.id, x: hit.x, y: hit.y, existing: true, original: hit };
@@ -545,8 +577,27 @@
     if (!editingText) return;
     const text = $('textInput').value;
     const item = { id: editingText.id, tool: 'text', x: editingText.x, y: editingText.y, size: Number($('textSize').value), color, text };
-    renderAll();
+    // Rita tavlan utan den text som redigeras, och den nya texten ovanpå.
+    const rest = new Board();
+    rest.replace(board.strokes.filter((st) => st.id !== editingText.id));
+    renderLayered(ctx, background, rest, canvas.width, canvas.height, layer);
     if (text.trim()) drawTextItem(ctx, item, canvas.width, canvas.height);
+  }
+
+  // Textobjektet under en punkt (i canvaspixlar), om något.
+  function textAt(px, py) {
+    let hit = null;
+    for (const item of board.strokes) {
+      if (item.tool !== 'text') continue;
+      const b = textItemBounds(ctx, item, canvas.width, canvas.height);
+      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) hit = item;
+    }
+    return hit;
+  }
+
+  function canvasPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    return [(e.clientX - rect.left) * (canvas.width / rect.width), (e.clientY - rect.top) * (canvas.height / rect.height)];
   }
 
   function commitText() {

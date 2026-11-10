@@ -32,7 +32,8 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    Med textverktyget (**T**) klickar du på tavlan och skriver. Knapparna **x²**, **x₁**, **√x** och
    **a⁄b** ger upphöjt, nedsänkt, roten ur och bråk: markera text och tryck, eller tryck och skriv över
    platshållaren. Symbolraden infogar π, ≤, × med mera. Den som vill kan skriva notationen direkt:
-   `x^2`, `x^{10}`, `a_1`, `sqrt(x+1)`, `frac(a,b)`. Klicka på befintlig text för att ändra eller ta bort den.
+   `x^2`, `x^{10}`, `a_1`, `sqrt(x+1)`, `frac(a,b)`. Klicka på befintlig text för att ändra eller ta bort den,
+   eller dra i den för att flytta den.
    Raden **Sparade uppgifter** låter dig förbereda uppgifter i förväg: **Spara** lägger tavlan i
    webbläsarens minne, **Ladda** hämtar den igen och **Skicka till alla** delar ut den. **Exportera fil** och
    **Importera fil** flyttar uppgifter mellan datorer. Uppgiftssidan (`uppgift.html`) går att öppna utan rum
