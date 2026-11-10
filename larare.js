@@ -254,6 +254,7 @@
     remove.addEventListener('click', () => removeStudent(student));
     students.set(clientId, student);
     order.push(clientId);
+    renderNames();
     updateCount();
     markDirty(student);
     return student;
@@ -261,8 +262,27 @@
 
   function setName(student, name) {
     student.name = String(name || '').trim().slice(0, 40);
-    student.nameEl.textContent = student.name || 'Utan namn';
+    renderNames();
   }
+
+  // Namnen är dolda i rutnätet tills läraren väljer att visa dem, så att
+  // översikten kan ligga på projektorn utan att avslöja vem som ritat vad.
+  let namesVisible = storage.get('wb-names', true) === '1';
+  function tileLabel(student) {
+    if (namesVisible) return student.name || 'Utan namn';
+    return 'Tavla ' + (order.indexOf(student.id) + 1);
+  }
+  function renderNames() {
+    for (const s of students.values()) s.nameEl.textContent = tileLabel(s);
+    const b = $('toggleNames');
+    b.textContent = namesVisible ? 'Dölj namn' : 'Visa namn';
+    b.classList.toggle('active', namesVisible);
+  }
+  $('toggleNames').addEventListener('click', () => {
+    namesVisible = !namesVisible;
+    storage.set('wb-names', namesVisible ? '1' : '0', true);
+    renderNames();
+  });
 
   function updateTile(student) {
     student.tile.classList.toggle('offline', !student.connected);
@@ -304,6 +324,7 @@
     student.tile.remove();
     if (viewing === student.id) closeViewer();
     updateCount();
+    renderNames();
   }
 
   // ---------- Rendering ----------
@@ -343,7 +364,7 @@
     const s = students.get(clientId);
     if (!s) return;
     viewing = clientId;
-    nameShown = false;
+    nameShown = namesVisible;
     viewer.hidden = false;
     renderViewerName();
     resizeViewer();

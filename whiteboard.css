@@ -266,6 +266,7 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 .top .spacer { flex: 1; }
 .top .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .top .actions label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.9rem; }
+.top .actions button.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .invite {
   display: flex;
   gap: 24px;

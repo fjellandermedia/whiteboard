@@ -17,7 +17,8 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
 3. Eleverna ritar med penna, finger eller mus. Verktyg: fem färger, tre tjocklekar, sudd, ångra (Ctrl+Z)
    och rensa. Med **Bara penna** ikryssat ignoreras fingrar, så handflatan inte ritar. Rutan kryssas i
    automatiskt första gången en penna används.
-4. Läraren ser alla tavlor i ett rutnät. Klicka på en tavla för att visa den stort, bläddra med
+4. Läraren ser alla tavlor i ett rutnät, utan namn: tavlorna heter "Tavla 1", "Tavla 2" och så vidare
+   tills du trycker **Visa namn**. Valet gäller fliken tills den stängs. Klicka på en tavla för att visa den stort, bläddra med
    piltangenterna, **F** för fullskärm och **Esc** för att stänga. Visningen uppdateras live.
    Elevens namn är dolt i visningen tills du klickar på **Visa namn** (eller trycker **N**), så att
    tavlor kan visas anonymt på projektorn.
