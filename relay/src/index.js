@@ -216,6 +216,21 @@ export class Room {
         this.toTeachers({ t: 'clear', clientId });
         break;
       }
+      case 'remove-all': {
+        // Alla elever kopplas bort och deras tavlor raderas. Uppgiften ligger kvar.
+        const keys = [];
+        for (const clientId of this.students.keys()) {
+          for (const ws of this.state.getWebSockets(clientId)) {
+            try { ws.close(4001, 'removed'); } catch (e) { /* ignorera */ }
+          }
+          keys.push('s:' + clientId);
+        }
+        this.students.clear();
+        this.dirty.clear();
+        if (keys.length) this.state.storage.delete(keys);
+        this.toTeachers({ t: 'removed-all' });
+        break;
+      }
       case 'remove': {
         const clientId = String(msg.clientId || '');
         if (!this.students.has(clientId)) return;

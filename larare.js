@@ -160,6 +160,9 @@
       case 'removed':
         if (student) dropStudent(student);
         return;
+      case 'removed-all':
+        for (const s of [...students.values()]) dropStudent(s);
+        return;
       case 'cleared':
         for (const s of students.values()) {
           s.board.clear();
@@ -476,6 +479,15 @@
 
   // ---------- Knappar ----------
   $('savePdf').addEventListener('click', saveAllPdf);
+  $('removeAll').addEventListener('click', () => {
+    if (!students.size) return;
+    if (!confirm('Ta bort alla elever och deras tavlor från rummet? Eleverna kopplas bort och måste gå med igen. Uppgiften ligger kvar. Spara först om du vill behålla tavlorna.')) return;
+    if (!relay || !relay.send({ t: 'remove-all' })) {
+      alert('Ingen kontakt med servern just nu. Försök igen om en stund.');
+      return;
+    }
+    for (const s of [...students.values()]) dropStudent(s);
+  });
   $('task').addEventListener('click', () => {
     window.open('uppgift.html#' + room, 'wb-task-' + room);
   });

@@ -38,7 +38,8 @@ fungerar även på skolnät som blockerar annan trafik. Cloudflares gratisnivå 
    **Importera fil** flyttar uppgifter mellan datorer. Uppgiftssidan (`uppgift.html`) går att öppna utan rum
    för att förbereda, men skicka kan man bara när den öppnats via knappen Uppgift på lärarsidan.
 7. **Rensa** på en tavla rensar den elevens tavla, även hos eleven. **Rensa alla** rensar alla
-   elevers tavlor men låter uppgiften ligga kvar.
+   elevers tavlor men låter uppgiften ligga kvar. **Ta bort alla** kopplar bort alla elever och raderar
+   deras tavlor från rummet, till exempel inför nästa klass med samma kod.
 
 Rumskoden och en hemlig nyckel per kod sparas i lärarens webbläsare. Bara den webbläsare som först
 öppnade rummet kan se tavlorna, och en omladdning hämtar hela rummet från servern igen. Rummet ligger
